@@ -50,10 +50,17 @@
 ;(use-package base16-theme
 ;  :config
 ;  (load-theme 'base16-black-metal t))
-(use-package jazz-theme
+;(use-package jazz-theme
+;  :config
+;  (load-theme 'jazz t))
+(use-package gruvbox-theme
   :config
-  (load-theme 'jazz t))
-;(set-frame-font "Hack 12" nil t)
+  (load-theme 'gruvbox-dark-hard t))
+
+;; Set Japanese font
+(dolist (charset '(kana han symbol cjk-misc bopomofo))
+  (set-fontset-font (frame-parameter nil 'font) charset
+                    (font-spec :family "IPAMincho")))
 
 ;; Keep custom-set-variables/custom-set-faces in a separate file
 (setq custom-file "~/.emacs.d/custom.el")
@@ -74,7 +81,7 @@
 (show-paren-mode t)
 
 ;; y/n for yes/no
-(fset 'yes-or-no-p 'y-or-n-p)
+(defalias 'yes-or-no-p 'y-or-n-p)
 
 ;; Scroll line by line
 (setq scroll-step 1)
@@ -120,7 +127,7 @@
 (define-key dired-mode-map (kbd "C-c o") 'dired-open-file)
 
 ;; Quick launch dired on music directory
-(global-set-key (kbd "C-c C-m") (lambda () (interactive) (dired "~/ミュージック/")))
+(global-set-key (kbd "C-c C-m") (lambda () (interactive) (dired "~/音楽/")))
 
 ;; Use pdflatex
 (setq latex-run-command "pdflatex")
@@ -128,7 +135,7 @@
 ;; Ibuffer
 (global-set-key (kbd "C-c C-b") 'ibuffer)
 
-;; Package time
+;; Development packages
 (setq lsp-keymap-prefix "C-c l")
 ;; Note that must install language servers (ccls, pip install ‘python-language-server[all]’)
 (use-package lsp-mode
@@ -136,7 +143,10 @@
          (python-mode . lsp))
   :commands lsp
   :config
-  (setq lsp-completion-provider :capf))
+  (setq lsp-completion-provider :capf)
+  ;; Add pip install directory to PATH
+  (setenv "PATH" (concat (getenv "PATH") "~/.local/bin/"))
+  (setq exec-path (append exec-path '("~/.local/bin"))))
 (use-package lsp-treemacs
   :commands lsp-treemacs-errors-list
   :after lsp-mode treemacs
@@ -149,7 +159,13 @@
   (setq company-minimum-prefix-length 1
         company-idle-delay 0.0))
 (use-package flycheck)
-(use-package ccls)
+(use-package ccls
+  :config
+  (defun ccls-cmake ()
+    "Generate compile_commands.json from a directory where CMake has been run"
+    (interactive)
+    (shell-command "cmake -H. -BDebug -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=YES")
+    (shell-command "ln -sf Debug/compile_commands.json .")))
 
 ;; Need to run omnisharp-install-server after package is installed
 (use-package omnisharp
@@ -191,25 +207,9 @@
 (setq read-process-output-max (* 1024 1024))
 (setq lsp-idle-delay 0.5)
 
-;; Packages - Others
-(use-package emms
-  :bind (("C-c e p" . emms-pause)
-         ("C-c e f" . emms-next)
-         ("C-c e b" . emms-previous)
-         ("C-c e s" . emms-stop)
-         ("C-c e <right>" . (lambda () (interactive) (emms-seek 20)))
-         ("C-c e <left>" . (lambda () (interactive) (emms-seek -20)))
-         :map dired-mode-map
-         ("C-c e SPC" . emms-play-dired))
-  :config
-  (require 'emms-setup)
-  (require 'emms-player-mpv)
-
-  (emms-all)
-  (setq emms-player-list '(emms-player-mpv)))
-
+;; Other packages
 (use-package multiple-cursors
-  :bind ("C-c c" . mc/edit-lines))
+  :bind ("C-c m" . mc/edit-lines))
 
 (use-package avy
   :bind (("C-;" . avy-goto-char)
@@ -236,3 +236,27 @@
   (ivy-mode 1)
   (setq ivy-use-virtual-buffers t)
   (setq ivy-count-format "(%d/%d) "))
+
+(use-package emms
+  :bind (("C-c e p" . emms-pause)
+         ("C-c e f" . emms-next)
+         ("C-c e b" . emms-previous)
+         ("C-c e s" . emms-stop)
+         ("C-c e <right>" . (lambda () (interactive) (emms-seek 20)))
+         ("C-c e <left>" . (lambda () (interactive) (emms-seek -20)))
+         :map dired-mode-map
+         ("C-c e SPC" . emms-play-dired))
+  :config
+  (require 'emms-setup)
+  (require 'emms-player-mpv)
+
+  (emms-all)
+  (setq emms-player-list '(emms-player-mpv)))
+
+(use-package eyebrowse
+  :config
+  (eyebrowse-mode t))
+
+(use-package nov
+  :config
+  (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)))
