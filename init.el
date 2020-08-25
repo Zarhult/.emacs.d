@@ -5,24 +5,6 @@
 (if (and (version< emacs-version "26.3") (>= libgnutls-version 30604))
     (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3"))
 
-;; Speed up startup by suppressing startup garbage collection
-;; (taken from doom emacs)
-(setq gc-cons-threshold most-positive-fixnum ; 2^61 bytes
-      gc-cons-percentage 0.6)
-(add-hook 'emacs-startup-hook
-  (lambda ()
-    (setq gc-cons-threshold 16777216 ; 16mb
-          gc-cons-percentage 0.1)))
-(defun defer-garbage-collection-h ()
-  (setq gc-cons-threshold most-positive-fixnum))
-(defun restore-garbage-collection-h ()
-  ;; Defer it so that commands launched immediately after will enjoy the
-  ;; benefits.
-  (run-at-time
-   1 nil (lambda () (setq gc-cons-threshold gc-cons-threshold))))
-(add-hook 'minibuffer-setup-hook #'defer-garbage-collection-h)
-(add-hook 'minibuffer-exit-hook #'restore-garbage-collection-h)
-
 ;; Don't automatically refresh package contents (note: fresh install may need to manually do so)
 ;; package.el has to be loaded first
 (require 'package)
@@ -43,19 +25,26 @@
 (require 'use-package-ensure)
 (setq use-package-always-ensure t)
 
-;; Delete current theme when loading another
+;; 12-pt font
+(set-face-attribute 'default nil :height 120)
+
+;; Delete current theme before loading new one
 (defadvice load-theme (before theme-dont-propagate activate)
   (mapc #'disable-theme custom-enabled-themes))
-;; Load theme and font early
-;(use-package base16-theme
-;  :config
-;  (load-theme 'base16-black-metal t))
-;(use-package jazz-theme
+
+;; Load theme
+(use-package base16-theme
+  :config
+  (load-theme 'base16-atelier-lakeside t))
+;(use-package jazz-themep
 ;  :config
 ;  (load-theme 'jazz t))
-(use-package gruvbox-theme
-  :config
-  (load-theme 'gruvbox-dark-hard t))
+;(use-package gruvbox-theme
+;  :config
+;  (load-theme 'gruvbox-dark-hard t))
+;(use-package kaolin-themes
+;  :config
+;  (load-theme 'kaolin-dark t))
 
 ;; Set Japanese font
 (dolist (charset '(kana han symbol cjk-misc bopomofo))
@@ -101,7 +90,7 @@
 
 ;; Hide dotfiles in dired
 (require 'dired)
-(setq dired-listing-switches "-lgGhF")
+(setq dired-listing-switches "-lhF")
 
 ;; Functions to toggle showing dotfiles with C-.
 (defun reload-current-dired-buffer ()
@@ -132,9 +121,6 @@
 ;; Use pdflatex
 (setq latex-run-command "pdflatex")
 
-;; Ibuffer
-(global-set-key (kbd "C-c C-b") 'ibuffer)
-
 ;; Development packages
 (setq lsp-keymap-prefix "C-c l")
 ;; Note that must install language servers (ccls, pip install ‘python-language-server[all]’)
@@ -153,7 +139,7 @@
   :config
   (lsp-treemacs-sync-mode 1))
 (use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
-(use-package lsp-ui :commands lsp-ui-mode)
+;(use-package lsp-ui :commands lsp-ui-mode)
 (use-package company
   :config
   (setq company-minimum-prefix-length 1
@@ -166,17 +152,6 @@
     (interactive)
     (shell-command "cmake -H. -BDebug -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=YES")
     (shell-command "ln -sf Debug/compile_commands.json .")))
-
-;; Need to run omnisharp-install-server after package is installed
-(use-package omnisharp
-  :after (company flycheck)
-  :config
-  (add-hook 'csharp-mode-hook 'omnisharp-mode)
-  (eval-after-load
-      'company
-    '(add-to-list 'company-backends 'company-omnisharp))
-  (add-hook 'csharp-mode-hook #'company-mode)
-  (add-hook 'csharp-mode-hook #'flycheck-mode))
 
 (use-package projectile
   :init
