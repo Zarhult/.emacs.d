@@ -103,8 +103,8 @@
   (interactive)
   (progn
     (if (string-match "[Aa]" dired-listing-switches)
-        (setq dired-listing-switches "-lgGhF")
-      (setq dired-listing-switches "-lgGhFA"))
+        (setq dired-listing-switches "-lhF")
+      (setq dired-listing-switches "-lhFA"))
     (reload-current-dired-buffer)))
 (define-key dired-mode-map (kbd "C-.") 'toggle-dired-listing-switches)
 
