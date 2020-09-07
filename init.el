@@ -33,9 +33,12 @@
   (mapc #'disable-theme custom-enabled-themes))
 
 ;; Load theme
-(use-package base16-theme
+(use-package xresources-theme
   :config
-  (load-theme 'base16-atelier-lakeside t))
+  (load-theme 'xresources t))
+;(use-package base16-theme
+;  :config
+;  (load-theme 'base16-atelier-lakeside t))
 ;(use-package jazz-themep
 ;  :config
 ;  (load-theme 'jazz t))
@@ -103,8 +106,8 @@
   (interactive)
   (progn
     (if (string-match "[Aa]" dired-listing-switches)
-        (setq dired-listing-switches "-lgGhF")
-      (setq dired-listing-switches "-lgGhFA"))
+        (setq dired-listing-switches "-lhF")
+      (setq dired-listing-switches "-lhFA"))
     (reload-current-dired-buffer)))
 (define-key dired-mode-map (kbd "C-.") 'toggle-dired-listing-switches)
 
