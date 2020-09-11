@@ -252,6 +252,7 @@
 
 (use-package eyebrowse
   :config
+  (eyebrowse-setup-opinionated-keys)
   (eyebrowse-mode t))
 
 (use-package nov
