@@ -231,6 +231,25 @@
   (emms-all)
   (setq emms-player-list '(emms-player-mpv)))
 
+(use-package elfeed
+  :bind (:map elfeed-search-mode-map
+              ("v" . elfeed-view-mpv))
+  :config
+  (defun elfeed-v-mpv (url)
+    "Watch a video from URL in MPV"
+    (async-shell-command (format "mpv %s" url)))
+
+  (defun elfeed-view-mpv (&optional use-generic-p)
+    "Play youtube video from feed"
+    (interactive "P")
+    (let ((entries (elfeed-search-selected)))
+      (cl-loop for entry in entries
+               do (elfeed-untag entry 'unread)
+               when (elfeed-entry-link entry)
+               do (elfeed-v-mpv it))
+      (mapc #'elfeed-search-update-entry entries)
+      (unless (use-region-p) (forward-line)))))
+
 (use-package eyebrowse
   :config
   (eyebrowse-mode t))
