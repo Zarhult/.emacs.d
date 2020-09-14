@@ -121,6 +121,9 @@
 ;; Quick launch dired on music directory
 (global-set-key (kbd "C-c C-m") (lambda () (interactive) (dired "~/音楽/")))
 
+;; Don't auto-scale images
+(setq image-transform-resize 1)
+
 ;; Use pdflatex
 (setq latex-run-command "pdflatex")
 
