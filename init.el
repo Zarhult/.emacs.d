@@ -127,6 +127,17 @@
 ;; Use pdflatex
 (setq latex-run-command "pdflatex")
 
+;; Winner mode
+(winner-mode 1)
+
+;; Cache passwords for 5 minutes, do so in eshell with tramp
+(setq password-cache t)
+(setq password-cache-expiry 300)
+(require 'em-tramp)
+(add-to-list 'eshell-modules-list 'eshell-tramp)
+(setq eshell-prefer-lisp-functions t)
+(setq eshell-prefer-lisp-variables t)
+
 ;; Development packages
 (setq lsp-keymap-prefix "C-c l")
 ;; Note that must install language servers (ccls, pip install ‘python-language-server[all]’)
@@ -195,7 +206,7 @@
   (setq display-time-default-load-average nil)
   (display-time-mode t)
   (server-start)
-  (setq exwm-workspace-number 4)
+  (setq exwm-workspace-number 9)
 
   (add-hook 'exwm-update-class-hook
             (lambda ()
