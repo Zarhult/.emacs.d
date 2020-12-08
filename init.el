@@ -35,7 +35,14 @@
 ;; Load theme
 (use-package xresources-theme
   :config
-  (load-theme 'xresources t))
+  (load-theme 'xresources t)
+  ;; Use highlight instead of bar for hl-face colors
+;  (require 'hl-line)
+;  (set-face-background 'hl-line (face-attribute 'default :foreground))
+;  (set-face-foreground 'hl-line (face-attribute 'default :background)
+  ;; Make paren highlighting match theme
+  (set-face-background 'show-paren-match (face-attribute 'success :foreground)))
+
 ;(use-package base16-theme
 ;  :config
 ;  (load-theme 'base16-atelier-lakeside t))
@@ -143,13 +150,16 @@
 ;; Note that must install language servers (ccls, pip install ‘python-language-server[all]’)
 (use-package lsp-mode
   :hook (((c-mode c++-mode objc-mode) . lsp)
-         (python-mode . lsp))
+         (python-mode . lsp)
+         ((html-mode css-mode js-mode) . lsp))
   :commands lsp
   :config
   (setq lsp-completion-provider :capf)
   ;; Add pip install directory to PATH
   (setenv "PATH" (concat (getenv "PATH") "~/.local/bin/"))
   (setq exec-path (append exec-path '("~/.local/bin"))))
+;; Yasnippet needed for completion in some languages
+(use-package yasnippet)
 (use-package lsp-treemacs
   :commands lsp-treemacs-errors-list
   :after lsp-mode treemacs
@@ -200,67 +210,68 @@
 (setq lsp-idle-delay 0.5)
 
 ;; Other packages
-(use-package exwm
-  :config
-  (fringe-mode 1)
-  (setq display-time-default-load-average nil)
-  (display-time-mode t)
-  (server-start)
-  (setq exwm-workspace-number 9)
-
-  (add-hook 'exwm-update-class-hook
-            (lambda ()
-              (exwm-workspace-rename-buffer exwm-class-name)))
-  (setq exwm-input-global-keys
-      `(
-        ;; Bind "s-r" to exit char-mode and fullscreen mode.
-        ([?\s-r] . exwm-reset)
-        ;; Bind "s-w" to switch workspace interactively.
-        ([?\s-w] . exwm-workspace-switch)
-        ;; Bind "s-0" to "s-9" to switch to a workspace by its index.
-        ,@(mapcar (lambda (i)
-                    `(,(kbd (format "s-%d" i)) .
-                      (lambda ()
-                        (interactive)
-                        (exwm-workspace-switch-create ,i))))
-                  (number-sequence 0 9))
-        ;; Bind "s-p" to launch applications ('M-&' also works if the output
-        ;; buffer does not bother you).
-        ([?\s-p] . (lambda (command)
-		     (interactive (list (read-shell-command "$ ")))
-		     (start-process-shell-command command nil command)))
-        ;; Bind "s-<f2>" to "slock", a simple X display locker.
-        ([s-f2] . (lambda ()
-		    (interactive)
-		    (start-process "" nil "/usr/bin/slock")))))
-
-  (setq exwm-input-simulation-keys
-      '(
-        ;; movement
-        ([?\C-b] . [left])
-        ([?\M-b] . [C-left])
-        ([?\C-f] . [right])
-        ([?\M-f] . [C-right])
-        ([?\C-p] . [up])
-        ([?\C-n] . [down])
-        ([?\C-a] . [home])
-        ([?\C-e] . [end])
-        ([?\M-v] . [prior])
-        ([?\C-v] . [next])
-        ([?\C-d] . [delete])
-        ([?\C-k] . [S-end delete])
-        ;; cut/paste.
-        ([?\C-w] . [?\C-x])
-        ([?\M-w] . [?\C-c])
-        ([?\C-y] . [?\C-v])
-        ;; search
-        ([?\C-s] . [?\C-f])))
-
-  (exwm-enable)
-
+;; NOTE - uncommenting exwm screw up treemacs hl-face with xresources
+;(use-package exwm
+;  :config
+;  (fringe-mode 1)
+;  (setq display-time-default-load-average nil)
+;  (display-time-mode t)
+;  (server-start)
+;  (setq exwm-workspace-number 9)
+;
+;  (add-hook 'exwm-update-class-hook
+;            (lambda ()
+;              (exwm-workspace-rename-buffer exwm-class-name)))
+;  (setq exwm-input-global-keys
+;      `(
+;        ;; Bind "s-r" to exit char-mode and fullscreen mode.
+;        ([?\s-r] . exwm-reset)
+;        ;; Bind "s-w" to switch workspace interactively.
+;        ([?\s-w] . exwm-workspace-switch)
+;        ;; Bind "s-0" to "s-9" to switch to a workspace by its index.
+;        ,@(mapcar (lambda (i)
+;                    `(,(kbd (format "s-%d" i)) .
+;                      (lambda ()
+;                        (interactive)
+;                        (exwm-workspace-switch-create ,i))))
+;                  (number-sequence 0 9))
+;        ;; Bind "s-p" to launch applications ('M-&' also works if the output
+;        ;; buffer does not bother you).
+;        ([?\s-p] . (lambda (command)
+;		     (interactive (list (read-shell-command "$ ")))
+;		     (start-process-shell-command command nil command)))
+;        ;; Bind "s-<f2>" to "slock", a simple X display locker.
+;        ([s-f2] . (lambda ()
+;		    (interactive)
+;		    (start-process "" nil "/usr/bin/slock")))))
+;
+;  (setq exwm-input-simulation-keys
+;      '(
+;        ;; movement
+;        ([?\C-b] . [left])
+;        ([?\M-b] . [C-left])
+;        ([?\C-f] . [right])
+;        ([?\M-f] . [C-right])
+;        ([?\C-p] . [up])
+;        ([?\C-n] . [down])
+;        ([?\C-a] . [home])
+;        ([?\C-e] . [end])
+;        ([?\M-v] . [prior])
+;        ([?\C-v] . [next])
+;        ([?\C-d] . [delete])
+;        ([?\C-k] . [S-end delete])
+;        ;; cut/paste.
+;        ([?\C-w] . [?\C-x])
+;        ([?\M-w] . [?\C-c])
+;        ([?\C-y] . [?\C-v])
+;        ;; search
+;        ([?\C-s] . [?\C-f])))
+;
+;  (exwm-enable)
+;
 ;  (require 'exwm-config)
-;  (exwm-config-default)
-  )
+;  (exwm-config-default))
+
 (use-package multiple-cursors
   :bind ("C-c m" . mc/edit-lines))
 
