@@ -28,6 +28,9 @@
 ;; 12-pt font
 (set-face-attribute 'default nil :height 120)
 
+;; Set startup image
+(setq fancy-splash-image (expand-file-name "images/lain.png" user-emacs-directory))
+
 ;; Delete current theme before loading new one
 (defadvice load-theme (before theme-dont-propagate activate)
   (mapc #'disable-theme custom-enabled-themes))
@@ -210,7 +213,7 @@
 (setq lsp-idle-delay 0.5)
 
 ;; Other packages
-;; NOTE - uncommenting exwm screw up treemacs hl-face with xresources
+;; NOTE - uncommenting exwm screws up treemacs hl-face with xresources
 ;(use-package exwm
 ;  :config
 ;  (fringe-mode 1)
