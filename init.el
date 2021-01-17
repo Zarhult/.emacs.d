@@ -40,29 +40,19 @@
   :config
   (load-theme 'xresources t)
   ;; Use highlight instead of bar for hl-face colors
-;  (require 'hl-line)
-;  (set-face-background 'hl-line (face-attribute 'default :foreground))
-;  (set-face-foreground 'hl-line (face-attribute 'default :background)
+  ;  (require 'hl-line)
+  ;  (set-face-background 'hl-line (face-attribute 'default :foreground))
+  ;  (set-face-foreground 'hl-line (face-attribute 'default :background)
   ;; Make paren highlighting match theme
   (set-face-background 'show-paren-match (face-attribute 'success :foreground)))
-
-;(use-package base16-theme
-;  :config
-;  (load-theme 'base16-atelier-lakeside t))
-;(use-package jazz-themep
-;  :config
-;  (load-theme 'jazz t))
-;(use-package gruvbox-theme
-;  :config
-;  (load-theme 'gruvbox-dark-hard t))
-;(use-package kaolin-themes
-;  :config
-;  (load-theme 'kaolin-dark t))
 
 ;; Set Japanese font
 (dolist (charset '(kana han symbol cjk-misc bopomofo))
   (set-fontset-font (frame-parameter nil 'font) charset
                     (font-spec :family "IPAMincho")))
+
+;; Enable visual line mode, mainly to hide arrow icons
+(global-visual-line-mode 1)
 
 ;; Keep custom-set-variables/custom-set-faces in a separate file
 (setq custom-file "~/.emacs.d/custom.el")
@@ -72,15 +62,6 @@
 (if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
 (if (fboundp 'tool-bar-mode) (tool-bar-mode -1))
 (if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
-
-;; Show line/column in statusbar
-(setq column-number-mode t)
-
-;; Visual line mode, word wrap
-(global-visual-line-mode t)
-
-;; Highlight matching parens
-(show-paren-mode t)
 
 ;; y/n for yes/no
 (defalias 'yes-or-no-p 'y-or-n-p)
@@ -148,157 +129,11 @@
 (setq eshell-prefer-lisp-functions t)
 (setq eshell-prefer-lisp-variables t)
 
-;; Development packages
-(setq lsp-keymap-prefix "C-c l")
-;; Note that must install language servers (ccls, pip install ‘python-language-server[all]’)
-(use-package lsp-mode
-  :hook (((c-mode c++-mode objc-mode) . lsp)
-         (python-mode . lsp)
-         ((html-mode css-mode js-mode) . lsp))
-  :commands lsp
+;; Packages
+(use-package which-key
   :config
-  (setq lsp-completion-provider :capf)
-  ;; Add pip install directory to PATH
-  (setenv "PATH" (concat (getenv "PATH") "~/.local/bin/"))
-  (setq exec-path (append exec-path '("~/.local/bin"))))
-;; Yasnippet needed for completion in some languages
-(use-package yasnippet)
-(use-package lsp-treemacs
-  :commands lsp-treemacs-errors-list
-  :after lsp-mode treemacs
-  :config
-  (lsp-treemacs-sync-mode 1))
-(use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
-;(use-package lsp-ui :commands lsp-ui-mode)
-(use-package company
-  :config
-  (setq company-minimum-prefix-length 1
-        company-idle-delay 0.0))
-(use-package flycheck)
-(use-package ccls
-  :config
-  (defun ccls-cmake ()
-    "Generate compile_commands.json from a directory where CMake has been run"
-    (interactive)
-    (shell-command "cmake -H. -BDebug -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=YES")
-    (shell-command "ln -sf Debug/compile_commands.json .")))
-
-(use-package projectile
-  :init
-  (setq projectile-keymap-prefix (kbd "C-c p")) ; Has to be done before loading mode
-  :config
-  (setq projectile-completion-system 'ivy)
-  (projectile-mode +1))
-
-(use-package magit
-  :bind ("C-c g" . magit-status))
-
-(use-package treemacs
-  :bind ("C-c t" . treemacs)
-  :init
-  (with-eval-after-load 'winum
-    (define-key winum-keymap (kbd "M-0") #'treemacs-select-window)))
-(use-package treemacs-projectile
-  :after treemacs projectile)
-(use-package treemacs-icons-dired
-  :after treemacs dired
-  :config (treemacs-icons-dired-mode))
-(use-package treemacs-magit
-  :after treemacs magit)
-(require 'treemacs-icons-dired) ; Otherwise might have to run treemacs first
-
-;; Lsp performance boost
-(setq gc-cons-threshold 100000000)
-(setq read-process-output-max (* 1024 1024))
-(setq lsp-idle-delay 0.5)
-
-;; Better asm-mode indentation
-(defun my-asm-mode-hook ()
-;  (electric-indent-local-mode)  ; toggle off
-;  (setq tab-width 4)
-;  (setq indent-tabs-mode nil)
-  ;; asm-mode sets it locally to nil, to "stay closer to the old TAB behaviour".
-  ;; (setq tab-always-indent (default-value 'tab-always-indent))
-
-  (defun asm-calculate-indentation ()
-  (or
-   ;; Flush labels to the left margin.
-;   (and (looking-at "\\(\\.\\|\\sw\\|\\s_\\)+:") 0)
-   (and (looking-at "[.@_[:word:]]+:") 0)
-   ;; Same thing for `;;;' comments.
-   (and (looking-at "\\s<\\s<\\s<") 0)
-   ;; %if nasm macro stuff goes to the left margin
-   (and (looking-at "%") 0)
-   (and (looking-at "c?global\\|section\\|default\\|align\\|INIT_..X") 0)
-   ;; Simple `;' comments go to the comment-column
-   ;(and (looking-at "\\s<\\(\\S<\\|\\'\\)") comment-column)
-   ;; The rest goes at column 4
-   (or 4))))
-
-(add-hook 'asm-mode-hook #'my-asm-mode-hook)
-
-;; Other packages
-;; NOTE - uncommenting exwm screws up treemacs hl-face with xresources
-;(use-package exwm
-;  :config
-;  (fringe-mode 1)
-;  (setq display-time-default-load-average nil)
-;  (display-time-mode t)
-;  (server-start)
-;  (setq exwm-workspace-number 9)
-;
-;  (add-hook 'exwm-update-class-hook
-;            (lambda ()
-;              (exwm-workspace-rename-buffer exwm-class-name)))
-;  (setq exwm-input-global-keys
-;      `(
-;        ;; Bind "s-r" to exit char-mode and fullscreen mode.
-;        ([?\s-r] . exwm-reset)
-;        ;; Bind "s-w" to switch workspace interactively.
-;        ([?\s-w] . exwm-workspace-switch)
-;        ;; Bind "s-0" to "s-9" to switch to a workspace by its index.
-;        ,@(mapcar (lambda (i)
-;                    `(,(kbd (format "s-%d" i)) .
-;                      (lambda ()
-;                        (interactive)
-;                        (exwm-workspace-switch-create ,i))))
-;                  (number-sequence 0 9))
-;        ;; Bind "s-p" to launch applications ('M-&' also works if the output
-;        ;; buffer does not bother you).
-;        ([?\s-p] . (lambda (command)
-;		     (interactive (list (read-shell-command "$ ")))
-;		     (start-process-shell-command command nil command)))
-;        ;; Bind "s-<f2>" to "slock", a simple X display locker.
-;        ([s-f2] . (lambda ()
-;		    (interactive)
-;		    (start-process "" nil "/usr/bin/slock")))))
-;
-;  (setq exwm-input-simulation-keys
-;      '(
-;        ;; movement
-;        ([?\C-b] . [left])
-;        ([?\M-b] . [C-left])
-;        ([?\C-f] . [right])
-;        ([?\M-f] . [C-right])
-;        ([?\C-p] . [up])
-;        ([?\C-n] . [down])
-;        ([?\C-a] . [home])
-;        ([?\C-e] . [end])
-;        ([?\M-v] . [prior])
-;        ([?\C-v] . [next])
-;        ([?\C-d] . [delete])
-;        ([?\C-k] . [S-end delete])
-;        ;; cut/paste.
-;        ([?\C-w] . [?\C-x])
-;        ([?\M-w] . [?\C-c])
-;        ([?\C-y] . [?\C-v])
-;        ;; search
-;        ([?\C-s] . [?\C-f])))
-;
-;  (exwm-enable)
-;
-;  (require 'exwm-config)
-;  (exwm-config-default))
+  (setq which-key-idle-delay 0.5)
+  (which-key-mode))
 
 (use-package multiple-cursors
   :bind ("C-c m" . mc/edit-lines))
@@ -309,25 +144,6 @@
 
 (use-package expand-region
   :bind ("C-=" . er/expand-region))
-
-(use-package counsel
-  :bind (("C-s" . swiper-isearch)
-         ("M-x" . counsel-M-x)
-         ("C-x C-f" . counsel-find-file)
-         ("M-y" . counsel-yank-pop)
-         ("<f1> f" . counsel-describe-function)
-         ("<f1> v" . counsel-describe-variable)
-         ("<f1> l" . counsel-find-library)
-         ("<f2> i" . counsel-info-lookup-symbol)
-         ("<f2> u" . counsel-unicode-char)
-         ("<f2> j" . counsel-set-variable)
-         ("C-x b" . ivy-switch-buffer)
-         ("C-c v" . ivy-push-view)
-         ("C-c V" . ivy-pop-view))
-  :config
-  (ivy-mode 1)
-  (setq ivy-use-virtual-buffers t)
-  (setq ivy-count-format "(%d/%d) "))
 
 (use-package emms
   :bind (("C-c e p" . emms-pause)
@@ -341,7 +157,7 @@
   :config
   (require 'emms-setup)
   (require 'emms-player-mpv)
-
+  
   (emms-all)
   (setq emms-player-list '(emms-player-mpv)))
 
@@ -352,7 +168,7 @@
   (defun elfeed-v-mpv (url)
     "Watch a video from URL in MPV"
     (async-shell-command (format "mpv %s" url)))
-
+  
   (defun elfeed-view-mpv (&optional use-generic-p)
     "Play youtube video from feed"
     (interactive "P")
@@ -372,3 +188,57 @@
 (use-package nov
   :config
   (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)))
+
+;; Programming stuff/packages
+(use-package projectile
+  :init
+  (projectile-mode +1)
+  :bind (:map projectile-mode-map
+              ("C-c p" . projectile-command-map)))
+
+(setq lsp-keymap-prefix "C-c l") ; This line can't go inside the lsp-mode :config section
+(use-package lsp-mode
+  :hook (((c-mode c++-mode objc-mode) . lsp)
+         (lsp-mode . lsp-enable-which-key-integration))
+  :commands lsp
+  :config
+  (setq lsp-keymap-prefix "C-c l"))
+
+(use-package ccls
+  :hook ((c-mode c++-mode objc-mode cuda-mode) .
+         (lambda () (require 'ccls) (lsp)))
+  :config
+  (defun ccls-cmake ()
+    "Generate compile_commands.json from a directory where CMake has been run"
+    (interactive)
+    (shell-command "cmake -H. -BDebug -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=YES")
+    (shell-command "ln -sf Debug/compile_commands.json .")))
+
+(use-package magit
+  :config
+  :bind ("C-c g" . magit-file-dispatch))
+
+;; Better asm-mode indentation
+(defun my-asm-mode-hook ()
+;  (electric-indent-local-mode)  ; toggle off
+;  (setq tab-width 4)
+;  (setq indent-tabs-mode nil)
+  ;; asm-mode sets it locally to nil, to "stay closer to the old TAB behaviour".
+  ;; (setq tab-always-indent (default-value 'tab-always-indent))
+  
+  (defun asm-calculate-indentation ()
+    (or
+     ;; Flush labels to the left margin.
+ ;   (and (looking-at "\\(\\.\\|\\sw\\|\\s_\\)+:") 0)
+     (and (looking-at "[.@_[:word:]]+:") 0)
+     ;; Same thing for `;;;' comments.
+     (and (looking-at "\\s<\\s<\\s<") 0)
+     ;; %if nasm macro stuff goes to the left margin
+     (and (looking-at "%") 0)
+     (and (looking-at "c?global\\|section\\|default\\|align\\|INIT_..X") 0)
+     ;; Simple `;' comments go to the comment-column
+     ;(and (looking-at "\\s<\\(\\S<\\|\\'\\)") comment-column)
+     ;; The rest goes at column 4
+     (or 4))))
+
+(add-hook 'asm-mode-hook #'my-asm-mode-hook)
