@@ -13,8 +13,7 @@
 
 ;; Set up package.el to work with MELPA and org mode
 (add-to-list 'package-archives
-             '("melpa" . "https://melpa.org/packages/")
-             '("org"   . "https://orgmode.org/elpa/"))
+             '("melpa" . "https://melpa.org/packages/"))
 (package-initialize)
 
 ;; Install use-package
@@ -31,20 +30,11 @@
 ;; Set startup image
 (setq fancy-splash-image (expand-file-name "images/lain.png" user-emacs-directory))
 
-;; Delete current theme before loading new one
-(defadvice load-theme (before theme-dont-propagate activate)
-  (mapc #'disable-theme custom-enabled-themes))
+;; Highlight matching parens
+(show-paren-mode t)
 
-;; Load theme
-(use-package xresources-theme
-  :config
-  (load-theme 'xresources t)
-  ;; Use highlight instead of bar for hl-face colors
-  ;  (require 'hl-line)
-  ;  (set-face-background 'hl-line (face-attribute 'default :foreground))
-  ;  (set-face-foreground 'hl-line (face-attribute 'default :background)
-  ;; Make paren highlighting match theme
-  (set-face-background 'show-paren-match (face-attribute 'success :foreground)))
+;; Show column in mode-line
+(setq column-number-mode t)
 
 ;; Set Japanese font
 (dolist (charset '(kana han symbol cjk-misc bopomofo))
@@ -112,6 +102,14 @@
 ;; Quick launch dired on music directory
 (global-set-key (kbd "C-c C-m") (lambda () (interactive) (dired "~/音楽/")))
 
+;; Cache passwords for 5 minutes, do so in eshell with tramp
+(setq password-cache t)
+(setq password-cache-expiry 300)
+(require 'em-tramp)
+(add-to-list 'eshell-modules-list 'eshell-tramp)
+(setq eshell-prefer-lisp-functions t)
+(setq eshell-prefer-lisp-variables t)
+
 ;; Don't auto-scale images
 (setq image-transform-resize 1)
 
@@ -121,18 +119,48 @@
 ;; Winner mode
 (winner-mode 1)
 
-;; Cache passwords for 5 minutes, do so in eshell with tramp
-(setq password-cache t)
-(setq password-cache-expiry 300)
-(require 'em-tramp)
-(add-to-list 'eshell-modules-list 'eshell-tramp)
-(setq eshell-prefer-lisp-functions t)
-(setq eshell-prefer-lisp-variables t)
+;; Keybind to check current line number
+;(global-set-key (kbd "C-c j") ;(lambda() (interactive) (what-line)))
+
+;; gdb/gud configuration
+(setq gdb-show-main t)
+(setq gdb-show-main t)
+
+;; icomplete
+(require 'icomplete)
+(icomplete-mode 1)
+;; Show choices vertically
+(setq icomplete-separator "\n")
+(setq icomplete-hide-common-prefix nil)
+(setq icomplete-in-buffer t)
+
+;; ido
+(require 'ido)
+(ido-mode 1)
+(ido-everywhere 1)
+(setq ido-enable-flex-matching t)
+;; Show choices vertically
+(make-local-variable 'ido-decorations)
+(setf (nth 2 ido-decorations) "\n")
 
 ;; Packages
+;; Use ido for completion-at-point
+(use-package ido-at-point
+  :config
+  (ido-at-point-mode))
+;; Use ido everywhere possible
+(use-package ido-completing-read+
+  :config
+  (ido-ubiquitous-mode 1))
+
+;; (use-package ivy
+;;   :config
+;;   (ivy-mode 1)
+;;   (setq ivy-use-virtual-buffers t)
+;;   (setq enable-recursive-minibuffers t))
+
 (use-package which-key
   :config
-  (setq which-key-idle-delay 0.5)
   (which-key-mode))
 
 (use-package multiple-cursors
@@ -190,11 +218,25 @@
   (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)))
 
 ;; Programming stuff/packages
+(use-package paredit
+  :config
+  (autoload 'enable-paredit-mode "paredit" "Turn on pseudo-structural editing of Lisp code." t)
+  (add-hook 'emacs-lisp-mode-hook       #'enable-paredit-mode)
+  (add-hook 'eval-expression-minibuffer-setup-hook #'enable-paredit-mode)
+  (add-hook 'ielm-mode-hook             #'enable-paredit-mode)
+  (add-hook 'lisp-mode-hook             #'enable-paredit-mode)
+  (add-hook 'lisp-interaction-mode-hook #'enable-paredit-mode)
+  (add-hook 'scheme-mode-hook           #'enable-paredit-mode))
+
 (use-package projectile
   :init
   (projectile-mode +1)
   :bind (:map projectile-mode-map
-              ("C-c p" . projectile-command-map)))
+              ("C-c p" . projectile-command-map))
+  :config
+  (setq projectile-switch-project-action #'projectile-dired)
+  (when (file-directory-p "~/dev")
+    (setq projectile-project-search-path '("~/dev"))))
 
 (setq lsp-keymap-prefix "C-c l") ; This line can't go inside the lsp-mode :config section
 (use-package lsp-mode
@@ -220,25 +262,58 @@
 
 ;; Better asm-mode indentation
 (defun my-asm-mode-hook ()
-;  (electric-indent-local-mode)  ; toggle off
-;  (setq tab-width 4)
-;  (setq indent-tabs-mode nil)
-  ;; asm-mode sets it locally to nil, to "stay closer to the old TAB behaviour".
-  ;; (setq tab-always-indent (default-value 'tab-always-indent))
-  
   (defun asm-calculate-indentation ()
     (or
-     ;; Flush labels to the left margin.
- ;   (and (looking-at "\\(\\.\\|\\sw\\|\\s_\\)+:") 0)
      (and (looking-at "[.@_[:word:]]+:") 0)
-     ;; Same thing for `;;;' comments.
      (and (looking-at "\\s<\\s<\\s<") 0)
-     ;; %if nasm macro stuff goes to the left margin
      (and (looking-at "%") 0)
      (and (looking-at "c?global\\|section\\|default\\|align\\|INIT_..X") 0)
-     ;; Simple `;' comments go to the comment-column
-     ;(and (looking-at "\\s<\\(\\S<\\|\\'\\)") comment-column)
-     ;; The rest goes at column 4
      (or 4))))
 
 (add-hook 'asm-mode-hook #'my-asm-mode-hook)
+
+;; Delete current theme before loading new one
+(defadvice load-theme (before theme-dont-propagate activate)
+  (mapc #'disable-theme custom-enabled-themes))
+
+;; Load theme last so everything we need to theme is available
+(use-package xresources-theme
+  :config
+  (load-theme 'xresources t)
+  ;; Grab useful function from xresources-theme.el, for extending the theme
+  (defun xresources-theme-color (name)
+    "Read the color NAME (e.g. color5) from the X resources."
+    (x-get-resource name ""))
+  ;; Now get variables for all the theme colors
+  (let* ((foreground (xresources-theme-color "foreground"))
+         (background (xresources-theme-color "background"))
+         (black (xresources-theme-color "color0"))
+         (red (xresources-theme-color "color1"))
+         (green (xresources-theme-color "color2"))
+         (yellow (xresources-theme-color "color3"))
+         (blue (xresources-theme-color "color4"))
+         (magenta (xresources-theme-color "color5"))
+         (cyan (xresources-theme-color "color6"))
+         (gray (xresources-theme-color "color7"))
+         (light-gray (xresources-theme-color "color8"))
+         (light-red (xresources-theme-color "color9"))
+         (light-green (xresources-theme-color "color10"))
+         (light-yellow (xresources-theme-color "color11"))
+         (light-blue (xresources-theme-color "color12"))
+         (light-magenta (xresources-theme-color "color13"))
+         (light-cyan (xresources-theme-color "color14"))
+         (white (xresources-theme-color "color15")))
+    ;; Extend the theme
+    (set-face-attribute 'show-paren-match nil :background blue)
+    (require 'avy)
+    (set-face-attribute 'avy-lead-face nil :foreground foreground)
+    (set-face-attribute 'avy-lead-face nil :background blue)
+    (set-face-attribute 'avy-lead-face-0 nil :foreground foreground)
+    (set-face-attribute 'avy-lead-face-0 nil :background red)
+    (set-face-attribute 'avy-lead-face-2 nil :foreground foreground)
+    (set-face-attribute 'avy-lead-face-2 nil :background yellow)
+    (require 'flymake)
+    (set-face-attribute 'flymake-warning nil :underline `(:color ,blue :style wave))
+    (require 'ivy)
+    (set-face-attribute 'ivy-current-match nil :foreground foreground)
+    (set-face-attribute 'ivy-current-match nil :background green)))
