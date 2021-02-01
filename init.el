@@ -5,19 +5,18 @@
 (if (and (version< emacs-version "26.3") (>= libgnutls-version 30604))
     (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3"))
 
-;; Don't automatically refresh package contents (note: fresh install may need to manually do so)
-;; package.el has to be loaded first
+;; Ensure package.el is loaded
 (require 'package)
-(when (not package-archive-contents)
-  (package-refresh-contents))
 
-;; Set up package.el to work with MELPA and org mode
+;; Set up package.el to work with MELPA
 (add-to-list 'package-archives
              '("melpa" . "https://melpa.org/packages/"))
 (package-initialize)
 
-;; Install use-package
+;; For first startup, install use-package, and refresh package contents
 (unless (package-installed-p 'use-package)
+  (when (not package-archive-contents)
+    (package-refresh-contents))
   (package-install 'use-package))
 
 ;; Always install use-package packages if not already installed
@@ -49,7 +48,9 @@
 ;; Enable visual line mode, mainly to hide arrow icons
 (global-visual-line-mode 1)
 
-;; Keep custom-set-variables/custom-set-faces in a separate file
+;; Keep custom-set-variables/custom-set-faces in a separate file, creating it if necessary
+(unless (file-exists-p "~/.emacs.d/custom.el")
+  (with-temp-buffer (write-file "~/.emacs.d/custom.el")))
 (setq custom-file "~/.emacs.d/custom.el")
 (load custom-file)
 
@@ -293,3 +294,4 @@
     (require 'ivy)
     (set-face-attribute 'ivy-current-match nil :foreground foreground)
     (set-face-attribute 'ivy-current-match nil :background green)))
+
