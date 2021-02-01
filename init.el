@@ -24,11 +24,12 @@
 (require 'use-package-ensure)
 (setq use-package-always-ensure t)
 
-;; 12-pt font
-(set-face-attribute 'default nil :height 120)
-
-;; Set startup image
-(setq fancy-splash-image (expand-file-name "images/lain.png" user-emacs-directory))
+;; Automatically update and remove old packages
+(use-package auto-package-update
+  :config
+  (setq auto-package-update-delete-old-versions t)
+  (setq auto-package-update-hide-results t)
+  (auto-package-update-maybe))
 
 ;; Highlight matching parens
 (show-paren-mode t)
@@ -36,10 +37,14 @@
 ;; Show column in mode-line
 (setq column-number-mode t)
 
-;; Set Japanese font
-(dolist (charset '(kana han symbol cjk-misc bopomofo))
-  (set-fontset-font (frame-parameter nil 'font) charset
-                    (font-spec :family "IPAMincho")))
+;; 12-pt font
+(set-face-attribute 'default nil :height 120)
+
+;; Set Japanese font (if not in terminal emacs)
+(if (display-graphic-p)
+    (dolist (charset '(kana han symbol cjk-misc bopomofo))
+      (set-fontset-font (frame-parameter nil 'font) charset
+                        (font-spec :family "IPAMincho"))))
 
 ;; Enable visual line mode, mainly to hide arrow icons
 (global-visual-line-mode 1)
@@ -49,15 +54,14 @@
 (load custom-file)
 
 ;; Cleaner ui
-(if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
-(if (fboundp 'tool-bar-mode) (tool-bar-mode -1))
-(if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
+(scroll-bar-mode -1)
+(tool-bar-mode -1)
+(menu-bar-mode -1)
 
 ;; y/n for yes/no
 (defalias 'yes-or-no-p 'y-or-n-p)
 
 ;; Scroll line by line
-(setq scroll-step 1)
 (setq scroll-conservatively 10000)
 
 ;; Tabs are 4 spaces
@@ -71,6 +75,42 @@
       `((".*" . ,temporary-file-directory)))
 (setq auto-save-file-name-transforms
       `((".*" ,temporary-file-directory t)))
+
+;; Prettify symbols
+(global-prettify-symbols-mode t)
+
+;; Automatically insert closing parens
+(electric-pair-mode t)
+
+;; Don't auto-scale images
+(setq image-transform-resize 1)
+
+;; Use pdflatex
+(setq latex-run-command "pdflatex")
+
+;; gdb/gud configuration
+(setq gdb-show-main t)
+(setq gdb-show-main t)
+
+;; flymake error navigation
+(require 'flymake)
+(define-key flymake-mode-map (kbd "M-n") 'flymake-goto-next-error)
+(define-key flymake-mode-map (kbd "M-p") 'flymake-goto-prev-error)
+
+;; Automatically move cursor into newly created windows
+(defun split-and-follow-horizontally ()
+	(interactive)
+	(split-window-below)
+	(balance-windows)
+	(other-window 1))
+ (global-set-key (kbd "C-x 2") 'split-and-follow-horizontally)
+
+ (defun split-and-follow-vertically ()
+	(interactive)
+	(split-window-right)
+	(balance-windows)
+	(other-window 1))
+ (global-set-key (kbd "C-x 3") 'split-and-follow-vertically)
 
 ;; Hide dotfiles in dired
 (require 'dired)
@@ -99,8 +139,8 @@
     (call-process "xdg-open" nil 0 nil file)))
 (define-key dired-mode-map (kbd "C-c o") 'dired-open-file)
 
-;; Quick launch dired on music directory
-(global-set-key (kbd "C-c C-m") (lambda () (interactive) (dired "~/音楽/")))
+;; Keybind to quickly launch dired on music directory, in a new window
+(global-set-key (kbd "C-c C-m") (lambda () (interactive) (dired-other-window "~/音楽/")))
 
 ;; Cache passwords for 5 minutes, do so in eshell with tramp
 (setq password-cache t)
@@ -110,54 +150,24 @@
 (setq eshell-prefer-lisp-functions t)
 (setq eshell-prefer-lisp-variables t)
 
-;; Don't auto-scale images
-(setq image-transform-resize 1)
+;; Easier window navigation
+(global-set-key (kbd "C-c <left>") 'windmove-left)
+(global-set-key (kbd "C-c <right>") 'windmove-right)
+(global-set-key (kbd "C-c <up>") 'windmove-up)
+(global-set-key (kbd "C-c <down>") 'windmove-down)
 
-;; Use pdflatex
-(setq latex-run-command "pdflatex")
-
-;; Winner mode
-(winner-mode 1)
-
-;; Keybind to check current line number
-;(global-set-key (kbd "C-c j") ;(lambda() (interactive) (what-line)))
-
-;; gdb/gud configuration
-(setq gdb-show-main t)
-(setq gdb-show-main t)
-
-;; icomplete
-(require 'icomplete)
-(icomplete-mode 1)
-;; Show choices vertically
-(setq icomplete-separator "\n")
-(setq icomplete-hide-common-prefix nil)
-(setq icomplete-in-buffer t)
-
-;; ido
-(require 'ido)
-(ido-mode 1)
-(ido-everywhere 1)
-(setq ido-enable-flex-matching t)
-;; Show choices vertically
-(make-local-variable 'ido-decorations)
-(setf (nth 2 ido-decorations) "\n")
+;; Easier window resizing
+(global-set-key (kbd "C-M-b") 'shrink-window-horizontally)
+(global-set-key (kbd "C-M-f") 'enlarge-window-horizontally)
+(global-set-key (kbd "C-M-n") 'shrink-window)
+(global-set-key (kbd "C-M-p") 'enlarge-window)
 
 ;; Packages
-;; Use ido for completion-at-point
-(use-package ido-at-point
+(use-package ivy
   :config
-  (ido-at-point-mode))
-;; Use ido everywhere possible
-(use-package ido-completing-read+
-  :config
-  (ido-ubiquitous-mode 1))
-
-;; (use-package ivy
-;;   :config
-;;   (ivy-mode 1)
-;;   (setq ivy-use-virtual-buffers t)
-;;   (setq enable-recursive-minibuffers t))
+  (ivy-mode 1)
+  (setq ivy-use-virtual-buffers t)
+  (setq enable-recursive-minibuffers t))
 
 (use-package which-key
   :config
@@ -189,45 +199,11 @@
   (emms-all)
   (setq emms-player-list '(emms-player-mpv)))
 
-(use-package elfeed
-  :bind (:map elfeed-search-mode-map
-              ("v" . elfeed-view-mpv))
-  :config
-  (defun elfeed-v-mpv (url)
-    "Watch a video from URL in MPV"
-    (async-shell-command (format "mpv %s" url)))
-  
-  (defun elfeed-view-mpv (&optional use-generic-p)
-    "Play youtube video from feed"
-    (interactive "P")
-    (let ((entries (elfeed-search-selected)))
-      (cl-loop for entry in entries
-               do (elfeed-untag entry 'unread)
-               when (elfeed-entry-link entry)
-               do (elfeed-v-mpv it))
-      (mapc #'elfeed-search-update-entry entries)
-      (unless (use-region-p) (forward-line)))))
-
-(use-package eyebrowse
-  :config
-  (eyebrowse-setup-opinionated-keys)
-  (eyebrowse-mode t))
-
 (use-package nov
   :config
   (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)))
 
 ;; Programming stuff/packages
-(use-package paredit
-  :config
-  (autoload 'enable-paredit-mode "paredit" "Turn on pseudo-structural editing of Lisp code." t)
-  (add-hook 'emacs-lisp-mode-hook       #'enable-paredit-mode)
-  (add-hook 'eval-expression-minibuffer-setup-hook #'enable-paredit-mode)
-  (add-hook 'ielm-mode-hook             #'enable-paredit-mode)
-  (add-hook 'lisp-mode-hook             #'enable-paredit-mode)
-  (add-hook 'lisp-interaction-mode-hook #'enable-paredit-mode)
-  (add-hook 'scheme-mode-hook           #'enable-paredit-mode))
-
 (use-package projectile
   :init
   (projectile-mode +1)
