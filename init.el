@@ -100,33 +100,33 @@
 
 ;; Automatically move cursor into newly created windows
 (defun split-and-follow-horizontally ()
-  "Splits horizontally and moves the cursor into the new window."
-	(interactive)
-	(split-window-below)
-	(balance-windows)
-	(other-window 1))
- (global-set-key (kbd "C-x 2") 'split-and-follow-horizontally)
+  "Split horizontally and move the cursor into the new window."
+  (interactive)
+  (split-window-below)
+  (balance-windows)
+  (other-window 1))
+(global-set-key (kbd "C-x 2") 'split-and-follow-horizontally)
 
 (defun split-and-follow-vertically ()
-  "Splits vertically and moves the cursor into the new window."
-	(interactive)
-	(split-window-right)
-	(balance-windows)
-	(other-window 1))
- (global-set-key (kbd "C-x 3") 'split-and-follow-vertically)
+  "Split vertically and move the cursor into the new window."
+  (interactive)
+  (split-window-right)
+  (balance-windows)
+  (other-window 1))
+(global-set-key (kbd "C-x 3") 'split-and-follow-vertically)
 
 ;; Hide dotfiles in dired
 (require 'dired)
 (setq dired-listing-switches "-lhF")
 
-;; Functions to toggle showing dotfiles with C-.
+;; Functions and keybind to toggle showing dotfiles with C-.
 (defun reload-current-dired-buffer ()
   "Reload current `dired-mode' buffer"
   (let* ((dir (dired-current-directory)))
     (progn (kill-buffer (current-buffer))
            (dired dir))))
 (defun toggle-dired-listing-switches ()
-  "Toggles dired listing -A flag and reloads the buffer, for showing/hiding dotfiles"
+  "Toggle dired listing -A flag and reload the buffer, for showing/hiding dotfiles"
   (interactive)
   (progn
     (if (string-match "[Aa]" dired-listing-switches)
@@ -137,7 +137,7 @@
 
 ;; Launch from xdg-open in dired
 (defun dired-open-file ()
-  "Opens a file in dired using xdg-open."
+  "Open a file in dired using xdg-open."
   (interactive)
   (let* ((file (dired-get-filename nil t)))
     (call-process "xdg-open" nil 0 nil file)))
@@ -156,7 +156,7 @@
 
 ;; Function and keybind to launch eshell in a new window
 (defun eshell-other-window ()
-  "Launches eshell in a new window, or simply switches to that window if it exists."
+  "Launch eshell in a new window, or switch to eshell buffer in a new window if buffer exists."
   (interactive)
   (if (not (get-buffer "*eshell*"))
       (progn
@@ -164,7 +164,6 @@
         (other-window 1)
         (eshell))
     (switch-to-buffer-other-window "*eshell*")))
-
 (global-set-key (kbd "C-c s") 'eshell-other-window)
 
 ;; Easier window resizing
@@ -229,13 +228,9 @@
 (use-package lsp-mode
   :hook (((c-mode c++-mode objc-mode) . lsp)
          (lsp-mode . lsp-enable-which-key-integration))
-  :commands lsp
-  :config
-  (setq lsp-keymap-prefix "C-c l"))
+  :commands lsp)
 
 (use-package ccls
-  :hook ((c-mode c++-mode objc-mode cuda-mode) .
-         (lambda () (require 'ccls) (lsp)))
   :config
   (defun ccls-cmake ()
     "Generate compile_commands.json from a directory where CMake has been run."
@@ -256,7 +251,6 @@
      (and (looking-at "%") 0)
      (and (looking-at "c?global\\|section\\|default\\|align\\|INIT_..X") 0)
      (or 4))))
-
 (add-hook 'asm-mode-hook #'my-asm-mode-hook)
 
 ;; Delete current theme before loading new one
