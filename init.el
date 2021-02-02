@@ -100,13 +100,15 @@
 
 ;; Automatically move cursor into newly created windows
 (defun split-and-follow-horizontally ()
+  "Splits horizontally and moves the cursor into the new window."
 	(interactive)
 	(split-window-below)
 	(balance-windows)
 	(other-window 1))
  (global-set-key (kbd "C-x 2") 'split-and-follow-horizontally)
 
- (defun split-and-follow-vertically ()
+(defun split-and-follow-vertically ()
+  "Splits vertically and moves the cursor into the new window."
 	(interactive)
 	(split-window-right)
 	(balance-windows)
@@ -124,7 +126,7 @@
     (progn (kill-buffer (current-buffer))
            (dired dir))))
 (defun toggle-dired-listing-switches ()
-  "Toggle dired listing -A flag and refresh, for showing/hiding dotfiles"
+  "Toggles dired listing -A flag and reloads the buffer, for showing/hiding dotfiles"
   (interactive)
   (progn
     (if (string-match "[Aa]" dired-listing-switches)
@@ -135,6 +137,7 @@
 
 ;; Launch from xdg-open in dired
 (defun dired-open-file ()
+  "Opens a file in dired using xdg-open."
   (interactive)
   (let* ((file (dired-get-filename nil t)))
     (call-process "xdg-open" nil 0 nil file)))
@@ -151,17 +154,27 @@
 (setq eshell-prefer-lisp-functions t)
 (setq eshell-prefer-lisp-variables t)
 
-;; Easier window navigation
-(global-set-key (kbd "C-c <left>") 'windmove-left)
-(global-set-key (kbd "C-c <right>") 'windmove-right)
-(global-set-key (kbd "C-c <up>") 'windmove-up)
-(global-set-key (kbd "C-c <down>") 'windmove-down)
+;; Function and keybind to launch eshell in a new window
+(defun eshell-other-window ()
+  "Launches eshell in a new window, or simply switches to that window if it exists."
+  (interactive)
+  (if (not (get-buffer "*eshell*"))
+      (progn
+        (split-window-sensibly (selected-window))
+        (other-window 1)
+        (eshell))
+    (switch-to-buffer-other-window "*eshell*")))
+
+(global-set-key (kbd "C-c s") 'eshell-other-window)
 
 ;; Easier window resizing
 (global-set-key (kbd "C-M-b") 'shrink-window-horizontally)
 (global-set-key (kbd "C-M-f") 'enlarge-window-horizontally)
 (global-set-key (kbd "C-M-n") 'shrink-window)
 (global-set-key (kbd "C-M-p") 'enlarge-window)
+
+;; Keybind to transpose regions
+(global-set-key (kbd "C-c t") 'transpose-regions)
 
 ;; Packages
 (use-package ivy
@@ -170,16 +183,13 @@
   (setq ivy-use-virtual-buffers t)
   (setq enable-recursive-minibuffers t))
 
-(use-package which-key
-  :config
-  (which-key-mode))
-
-(use-package multiple-cursors
-  :bind ("C-c m" . mc/edit-lines))
-
 (use-package avy
   :bind (("C-;" . avy-goto-char)
          ("C-M-;" . avy-goto-line)))
+
+(use-package which-key
+  :config
+  (which-key-mode))
 
 (use-package expand-region
   :bind ("C-=" . er/expand-region))
@@ -228,7 +238,7 @@
          (lambda () (require 'ccls) (lsp)))
   :config
   (defun ccls-cmake ()
-    "Generate compile_commands.json from a directory where CMake has been run"
+    "Generate compile_commands.json from a directory where CMake has been run."
     (interactive)
     (shell-command "cmake -H. -BDebug -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=YES")
     (shell-command "ln -sf Debug/compile_commands.json .")))
@@ -253,45 +263,8 @@
 (defadvice load-theme (before theme-dont-propagate activate)
   (mapc #'disable-theme custom-enabled-themes))
 
-;; Load theme last so everything we need to theme is available
-(use-package xresources-theme
+;; Finally load theme
+(use-package cherry-blossom-theme
   :config
-  (load-theme 'xresources t)
-  ;; Grab useful function from xresources-theme.el, for extending the theme
-  (defun xresources-theme-color (name)
-    "Read the color NAME (e.g. color5) from the X resources."
-    (x-get-resource name ""))
-  ;; Now get variables for all the theme colors
-  (let* ((foreground (xresources-theme-color "foreground"))
-         (background (xresources-theme-color "background"))
-         (black (xresources-theme-color "color0"))
-         (red (xresources-theme-color "color1"))
-         (green (xresources-theme-color "color2"))
-         (yellow (xresources-theme-color "color3"))
-         (blue (xresources-theme-color "color4"))
-         (magenta (xresources-theme-color "color5"))
-         (cyan (xresources-theme-color "color6"))
-         (gray (xresources-theme-color "color7"))
-         (light-gray (xresources-theme-color "color8"))
-         (light-red (xresources-theme-color "color9"))
-         (light-green (xresources-theme-color "color10"))
-         (light-yellow (xresources-theme-color "color11"))
-         (light-blue (xresources-theme-color "color12"))
-         (light-magenta (xresources-theme-color "color13"))
-         (light-cyan (xresources-theme-color "color14"))
-         (white (xresources-theme-color "color15")))
-    ;; Extend the theme
-    (set-face-attribute 'show-paren-match nil :background blue)
-    (require 'avy)
-    (set-face-attribute 'avy-lead-face nil :foreground foreground)
-    (set-face-attribute 'avy-lead-face nil :background blue)
-    (set-face-attribute 'avy-lead-face-0 nil :foreground foreground)
-    (set-face-attribute 'avy-lead-face-0 nil :background red)
-    (set-face-attribute 'avy-lead-face-2 nil :foreground foreground)
-    (set-face-attribute 'avy-lead-face-2 nil :background yellow)
-    (require 'flymake)
-    (set-face-attribute 'flymake-warning nil :underline `(:color ,blue :style wave))
-    (require 'ivy)
-    (set-face-attribute 'ivy-current-match nil :foreground foreground)
-    (set-face-attribute 'ivy-current-match nil :background green)))
+  (load-theme 'cherry-blossom t))
 
