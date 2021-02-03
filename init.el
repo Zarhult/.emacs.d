@@ -175,12 +175,6 @@
     (switch-to-buffer-other-window "音楽")))
 (global-set-key (kbd "C-c m") 'dired-music-other-window)
 
-;; Easier window resizing
-(global-set-key (kbd "C-M-b") 'shrink-window-horizontally)
-(global-set-key (kbd "C-M-f") 'enlarge-window-horizontally)
-(global-set-key (kbd "C-M-n") 'shrink-window)
-(global-set-key (kbd "C-M-p") 'enlarge-window)
-
 ;; Keybind to transpose regions
 (global-set-key (kbd "C-c t") 'transpose-regions)
 
@@ -231,6 +225,7 @@
 (setq lsp-keymap-prefix "C-c l") ; This line can't go inside the lsp-mode :config section
 (use-package lsp-mode
   :hook (((c-mode c++-mode objc-mode) . lsp)
+         ((html-mode css-mode js-mode) . lsp)
          (lsp-mode . lsp-enable-which-key-integration))
   :commands lsp)
 
