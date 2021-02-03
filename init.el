@@ -143,9 +143,6 @@
     (call-process "xdg-open" nil 0 nil file)))
 (define-key dired-mode-map (kbd "C-c o") 'dired-open-file)
 
-;; Keybind to quickly launch dired on music directory, in a new window
-(global-set-key (kbd "C-c C-m") (lambda () (interactive) (dired-other-window "~/音楽/")))
-
 ;; Cache passwords for 5 minutes, do so in eshell with tramp
 (setq password-cache t)
 (setq password-cache-expiry 300)
@@ -156,7 +153,7 @@
 
 ;; Function and keybind to launch eshell in a new window
 (defun eshell-other-window ()
-  "Launch eshell in a new window, or switch to eshell buffer in a new window if buffer exists."
+  "Launch eshell in another window, or switch to eshell buffer in another window if buffer exists."
   (interactive)
   (if (not (get-buffer "*eshell*"))
       (progn
@@ -165,6 +162,18 @@
         (eshell))
     (switch-to-buffer-other-window "*eshell*")))
 (global-set-key (kbd "C-c s") 'eshell-other-window)
+
+;; Function and keybind to launch dired on music directory in another window
+(defun dired-music-other-window ()
+  "Launch dired on ~/音楽/ in another window, or switch to that buffer in another window if it already exists."
+  (interactive)
+  (if (not (get-buffer "音楽"))
+      (progn
+        (split-window-sensibly (selected-window))
+        (other-window 1)
+        (dired "~/音楽/"))
+    (switch-to-buffer-other-window "音楽")))
+(global-set-key (kbd "C-c m") 'dired-music-other-window)
 
 ;; Easier window resizing
 (global-set-key (kbd "C-M-b") 'shrink-window-horizontally)
@@ -181,10 +190,6 @@
   (ivy-mode 1)
   (setq ivy-use-virtual-buffers t)
   (setq enable-recursive-minibuffers t))
-
-(use-package avy
-  :bind (("C-;" . avy-goto-char)
-         ("C-M-;" . avy-goto-line)))
 
 (use-package which-key
   :config
@@ -205,7 +210,6 @@
   :config
   (require 'emms-setup)
   (require 'emms-player-mpv)
-  
   (emms-all)
   (setq emms-player-list '(emms-player-mpv)))
 
@@ -239,7 +243,6 @@
     (shell-command "ln -sf Debug/compile_commands.json .")))
 
 (use-package magit
-  :config
   :bind ("C-c g" . magit-file-dispatch))
 
 ;; Better asm-mode indentation
@@ -258,7 +261,14 @@
   (mapc #'disable-theme custom-enabled-themes))
 
 ;; Finally load theme
-(use-package cherry-blossom-theme
+(use-package ewal)
+(use-package ewal-spacemacs-themes
+  :bind ("C-c w" . (lambda () (interactive) (load-theme 'ewal-spacemacs-modern t))) ; Theme reloading keybind
+  :init
+  (setq spacemacs-theme-underline-parens t)
   :config
-  (load-theme 'cherry-blossom t))
+  (load-theme 'ewal-spacemacs-modern t))
 
+;; (use-package cherry-blossom-theme
+;;   :config
+;;   (load-theme 'cherry-blossom t))
