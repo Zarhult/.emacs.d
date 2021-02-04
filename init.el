@@ -80,9 +80,6 @@
 ;; Prettify symbols
 (global-prettify-symbols-mode t)
 
-;; Automatically insert closing parens
-(electric-pair-mode t)
-
 ;; Don't auto-scale images
 (setq image-transform-resize 1)
 
@@ -227,8 +224,10 @@
 
 (setq lsp-keymap-prefix "C-c l") ; This line can't go inside the lsp-mode :config section
 (use-package lsp-mode
-  :hook (((c-mode c++-mode objc-mode) . lsp)
-         ((html-mode css-mode js-mode) . lsp)
+  :hook (((c-mode c++-mode objc-mode) . lsp) ; Must install ccls externally
+         (html-mode . lsp) ; To install server: "npm install -g vscode-html-languageserver-bin"
+         (css-mode . lsp) ; To install server: "npm install -g vscode-css-languageserver-bin"
+         (js-mode . lsp) ; To install server: "npm i -g typescript-language-server; npm i -g typescript"
          (lsp-mode . lsp-enable-which-key-integration))
   :commands lsp
   :config
