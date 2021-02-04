@@ -43,7 +43,7 @@
 (if (display-graphic-p)
     (dolist (charset '(kana han symbol cjk-misc bopomofo))
       (set-fontset-font (frame-parameter nil 'font) charset
-                        (font-spec :family "IPAMincho"))))
+                        (font-spec :family "IPAGothic"))))
 
 ;; Enable visual line mode, mainly to hide arrow icons
 (global-visual-line-mode 1)
@@ -178,6 +178,9 @@
 ;; Keybind to transpose regions
 (global-set-key (kbd "C-c t") 'transpose-regions)
 
+;; Keybind for complete-symbol (so that its functionality is independent of mode, unlike C-M-i)
+(global-set-key (kbd "C-M-;") 'complete-symbol)
+
 ;; Packages
 (use-package ivy
   :config
@@ -227,7 +230,13 @@
   :hook (((c-mode c++-mode objc-mode) . lsp)
          ((html-mode css-mode js-mode) . lsp)
          (lsp-mode . lsp-enable-which-key-integration))
-  :commands lsp)
+  :commands lsp
+  :config
+  ; lsp-mode performance boosting
+  ; Be sure to use emacs version 27+ compiled with native json support
+  (setq gc-cons-threshold 6400000)
+  (setq read-process-output-max (* 1024 1024)))
+
 
 (use-package ccls
   :config
@@ -264,6 +273,3 @@
   :config
   (load-theme 'ewal-spacemacs-modern t))
 
-;; (use-package cherry-blossom-theme
-;;   :config
-;;   (load-theme 'cherry-blossom t))
