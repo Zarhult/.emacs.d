@@ -5,6 +5,12 @@
 (if (and (version< emacs-version "26.3") (>= libgnutls-version 30604))
     (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3"))
 
+;; Increase garbage collection during startup, for faster launch
+(setq startup/gc-cons-threshold gc-cons-threshold)
+(setq gc-cons-threshold most-positive-fixnum)
+(defun startup/reset-gc () (setq gc-cons-threshold startup/gc-cons-threshold))
+(add-hook 'emacs-startup-hook 'startup/reset-gc)
+
 ;; Ensure package.el is loaded
 (require 'package)
 
@@ -13,15 +19,11 @@
              '("melpa" . "https://melpa.org/packages/"))
 (package-initialize)
 
-;; For first startup, install use-package, and refresh package contents
+;; For fresh install, install use-package, and refresh package contents
 (unless (package-installed-p 'use-package)
   (when (not package-archive-contents)
     (package-refresh-contents))
   (package-install 'use-package))
-
-;; Always install use-package packages if not already installed
-(require 'use-package-ensure)
-(setq use-package-always-ensure t)
 
 ;; Automatically update and remove old packages
 (use-package auto-package-update
@@ -30,14 +32,21 @@
   (setq auto-package-update-hide-results t)
   (auto-package-update-maybe))
 
+;; Always install use-package packages if not already installed
+(require 'use-package-ensure)
+(setq use-package-always-ensure t)
+
+;; Always defer package loading unless specified otherwise with :demand t
+(setq use-package-always-defer t)
+
 ;; Highlight matching parens
 (show-paren-mode t)
 
-;; Show column in mode-line
+;; Show column in modeline
 (setq column-number-mode t)
 
 ;; 12-pt font
-(set-face-attribute 'default nil :height 120)
+(set-face-attribute 'default nil :height 140)
 
 ;; Set Japanese font (if not in terminal emacs)
 (if (display-graphic-p)
@@ -95,6 +104,15 @@
 (define-key flymake-mode-map (kbd "M-n") 'flymake-goto-next-error)
 (define-key flymake-mode-map (kbd "M-p") 'flymake-goto-prev-error)
 
+;; Cache passwords for 5 minutes, and do so in eshell with tramp
+(setq password-cache t)
+(setq password-cache-expiry 300)
+(require 'em-tramp)
+(add-to-list 'eshell-modules-list 'eshell-tramp)
+(setq eshell-prefer-lisp-functions t)
+(setq eshell-prefer-lisp-variables t)
+
+;; Non-package-related keybindings and related configuration
 ;; Automatically move cursor into newly created windows
 (defun split-and-follow-horizontally ()
   "Split horizontally and move the cursor into the new window."
@@ -140,14 +158,6 @@
     (call-process "xdg-open" nil 0 nil file)))
 (define-key dired-mode-map (kbd "C-c o") 'dired-open-file)
 
-;; Cache passwords for 5 minutes, do so in eshell with tramp
-(setq password-cache t)
-(setq password-cache-expiry 300)
-(require 'em-tramp)
-(add-to-list 'eshell-modules-list 'eshell-tramp)
-(setq eshell-prefer-lisp-functions t)
-(setq eshell-prefer-lisp-variables t)
-
 ;; Function and keybind to launch eshell in a new window
 (defun eshell-other-window ()
   "Launch eshell in another window, or switch to eshell buffer in another window if buffer exists."
@@ -178,8 +188,14 @@
 ;; Keybind for complete-symbol (so that its functionality is independent of mode, unlike C-M-i)
 (global-set-key (kbd "C-M-;") 'complete-symbol)
 
+;; Keybinds for setting/pausing/ending a timer
+(global-set-key (kbd "C-c j s") 'org-timer-set-timer)
+(global-set-key (kbd "C-c j p") 'org-timer-pause-or-continue)
+(global-set-key (kbd "C-c j k") 'org-timer-stop)
+
 ;; Packages
 (use-package ivy
+  :demand t
   :config
   (ivy-mode 1)
   (setq ivy-use-virtual-buffers t)
@@ -222,12 +238,13 @@
   (when (file-directory-p "~/dev")
     (setq projectile-project-search-path '("~/dev"))))
 
-(setq lsp-keymap-prefix "C-c l") ; This line can't go inside the lsp-mode :config section
 (use-package lsp-mode
+  :init
+  (setq lsp-keymap-prefix "C-c l")
   :hook (((c-mode c++-mode objc-mode) . lsp) ; Must install ccls externally
          (html-mode . lsp) ; To install server: "npm install -g vscode-html-languageserver-bin"
          (css-mode . lsp) ; To install server: "npm install -g vscode-css-languageserver-bin"
-         (js-mode . lsp) ; To install server: "npm i -g typescript-language-server; npm i -g typescript"
+         (js-mode . lsp) ; To install server: "npm install -g typescript-language-server; npm install -g typescript"
          (lsp-mode . lsp-enable-which-key-integration))
   :commands lsp
   :config
@@ -235,7 +252,6 @@
   ; Be sure to use emacs version 27+ compiled with native json support
   (setq gc-cons-threshold 6400000)
   (setq read-process-output-max (* 1024 1024)))
-
 
 (use-package ccls
   :config
@@ -268,7 +284,7 @@
 (use-package ewal-spacemacs-themes
   :bind ("C-c w" . (lambda () (interactive) (load-theme 'ewal-spacemacs-modern t))) ; Theme reloading keybind
   :init
-  (setq spacemacs-theme-underline-parens t)
-  :config
-  (load-theme 'ewal-spacemacs-modern t))
+  (setq spacemacs-theme-underline-parens t))
+
+(load-theme 'ewal-spacemacs-modern t)
 
