@@ -25,13 +25,6 @@
     (package-refresh-contents))
   (package-install 'use-package))
 
-;; Automatically update and remove old packages
-(use-package auto-package-update
-  :config
-  (setq auto-package-update-delete-old-versions t)
-  (setq auto-package-update-hide-results t)
-  (auto-package-update-maybe))
-
 ;; Always install use-package packages if not already installed
 (require 'use-package-ensure)
 (setq use-package-always-ensure t)
@@ -39,13 +32,20 @@
 ;; Always defer package loading unless specified otherwise with :demand t
 (setq use-package-always-defer t)
 
+;; Automatically update and remove old packages
+(use-package auto-package-update
+  :config
+  (setq auto-package-update-delete-old-versions t)
+  (setq auto-package-update-hide-results t)
+  (auto-package-update-maybe))
+
 ;; Highlight matching parens
 (show-paren-mode t)
 
 ;; Show column in modeline
 (setq column-number-mode t)
 
-;; 12-pt font
+;; Font size
 (set-face-attribute 'default nil :height 140)
 
 ;; Set Japanese font (if not in terminal emacs)
@@ -96,7 +96,6 @@
 (setq latex-run-command "pdflatex")
 
 ;; gdb/gud configuration
-(setq gdb-show-main t)
 (setq gdb-show-main t)
 
 ;; flymake error navigation
@@ -189,15 +188,27 @@
 (global-set-key (kbd "C-M-;") 'complete-symbol)
 
 ;; Keybinds for setting/pausing/ending a timer
+(require 'org) ; Otherwise these functions may not be available
 (global-set-key (kbd "C-c j s") 'org-timer-set-timer)
 (global-set-key (kbd "C-c j p") 'org-timer-pause-or-continue)
 (global-set-key (kbd "C-c j k") 'org-timer-stop)
+
+;; Alternate keybind for backspace
+(global-set-key (kbd "C-;") 'delete-backward-char)
 
 ;; Make C-x k simply kill the current buffer without a prompt
 (global-set-key (kbd "C-x k") 'kill-this-buffer)
 
 ;; Packages
+(use-package diminish
+  :demand t; Otherwise won't automatically diminish
+  :config
+  (diminish 'eldoc-mode)
+  (diminish 'visual-line-mode)
+  (diminish 'abbrev-mode))
+
 (use-package ivy
+  :diminish
   :demand t
   :config
   (ivy-mode 1)
@@ -205,6 +216,7 @@
   (setq enable-recursive-minibuffers t))
 
 (use-package which-key
+  :diminish
   :config
   (which-key-mode))
 
@@ -230,8 +242,15 @@
   :config
   (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)))
 
+(use-package pdf-tools ; Must install app-text/poppler with "cairo" use flag on gentoo
+  :demand t ; Otherwise emacs will default to DocView
+  :hook (pdf-view-mode . pdf-view-midnight-minor-mode)
+  :config
+  (pdf-tools-install))
+
 ;; Programming stuff/packages
 (use-package projectile
+  :diminish
   :init
   (projectile-mode +1)
   :bind (:map projectile-mode-map
@@ -283,12 +302,21 @@
 (defadvice load-theme (before theme-dont-propagate activate)
   (mapc #'disable-theme custom-enabled-themes))
 
-;; Finally load theme
+;; Themes
 (use-package ewal)
 (use-package ewal-spacemacs-themes
-  :bind ("C-c w" . (lambda () (interactive) (load-theme 'ewal-spacemacs-classic t))) ; Theme reloading keybind
+  :bind ("C-c w" . (lambda () (interactive) (load-theme 'ewal-spacemacs-classic t))) ; Ewal theme reloading keybind
   :init
   (setq spacemacs-theme-underline-parens t))
-(use-package doom-themes)
 
+;; Function and keybind to toggle between dark and light theme
+(defun toggle-theme ()
+  (interactive)
+  (if (eq (car custom-enabled-themes) 'ewal-spacemacs-classic)
+      (load-theme 'doom-one-light t)
+    (load-theme 'ewal-spacemacs-classic t)))
+(global-set-key (kbd "C-c k") 'toggle-theme)
+
+;; Finally, load default theme (dark)
 (load-theme 'ewal-spacemacs-classic t)
+
