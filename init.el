@@ -193,6 +193,9 @@
 (global-set-key (kbd "C-c j p") 'org-timer-pause-or-continue)
 (global-set-key (kbd "C-c j k") 'org-timer-stop)
 
+;; Make C-x k simply kill the current buffer without a prompt
+(global-set-key (kbd "C-x k") 'kill-this-buffer)
+
 ;; Packages
 (use-package ivy
   :demand t
@@ -245,6 +248,7 @@
          (html-mode . lsp) ; To install server: "npm install -g vscode-html-languageserver-bin"
          (css-mode . lsp) ; To install server: "npm install -g vscode-css-languageserver-bin"
          (js-mode . lsp) ; To install server: "npm install -g typescript-language-server; npm install -g typescript"
+         (python-mode . lsp) ; To install server: "pip install 'python-language-server[all]'"
          (lsp-mode . lsp-enable-which-key-integration))
   :commands lsp
   :config
@@ -282,9 +286,9 @@
 ;; Finally load theme
 (use-package ewal)
 (use-package ewal-spacemacs-themes
-  :bind ("C-c w" . (lambda () (interactive) (load-theme 'ewal-spacemacs-modern t))) ; Theme reloading keybind
+  :bind ("C-c w" . (lambda () (interactive) (load-theme 'ewal-spacemacs-classic t))) ; Theme reloading keybind
   :init
   (setq spacemacs-theme-underline-parens t))
+(use-package doom-themes)
 
-(load-theme 'ewal-spacemacs-modern t)
-
+(load-theme 'ewal-spacemacs-classic t)
