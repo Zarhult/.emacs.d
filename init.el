@@ -43,7 +43,7 @@
 (show-paren-mode t)
 
 ;; Show column in modeline
-(setq column-number-mode t)
+(column-number-mode t)
 
 ;; Font size
 (set-face-attribute 'default nil :height 140)
@@ -55,7 +55,7 @@
                         (font-spec :family "IPAGothic"))))
 
 ;; Enable visual line mode, mainly to hide arrow icons
-(global-visual-line-mode 1)
+(global-visual-line-mode t)
 
 ;; Keep custom-set-variables/custom-set-faces in a separate file, creating it if necessary
 (unless (file-exists-p "~/.emacs.d/custom.el")
@@ -67,6 +67,10 @@
 (scroll-bar-mode -1)
 (tool-bar-mode -1)
 (menu-bar-mode -1)
+
+;; Show time in modeline, without load average
+(display-time-mode t)
+(setq display-time-default-load-average nil)
 
 ;; y/n for yes/no
 (defalias 'yes-or-no-p 'y-or-n-p)
@@ -97,11 +101,6 @@
 
 ;; gdb/gud configuration
 (setq gdb-show-main t)
-
-;; flymake error navigation
-(require 'flymake)
-(define-key flymake-mode-map (kbd "M-n") 'flymake-goto-next-error)
-(define-key flymake-mode-map (kbd "M-p") 'flymake-goto-prev-error)
 
 ;; Cache passwords for 5 minutes, and do so in eshell with tramp
 (setq password-cache t)
@@ -181,12 +180,6 @@
     (switch-to-buffer-other-window "音楽")))
 (global-set-key (kbd "C-c m") 'dired-music-other-window)
 
-;; Keybind to transpose regions
-(global-set-key (kbd "C-c t") 'transpose-regions)
-
-;; Keybind for complete-symbol (so that its functionality is independent of mode, unlike C-M-i)
-(global-set-key (kbd "C-M-;") 'complete-symbol)
-
 ;; Keybinds for setting/pausing/ending a timer
 (require 'org) ; Otherwise these functions may not be available
 (global-set-key (kbd "C-c j s") 'org-timer-set-timer)
@@ -201,7 +194,7 @@
 
 ;; Packages
 (use-package diminish
-  :demand t; Otherwise won't automatically diminish
+  :demand t ; Otherwise won't automatically diminish
   :config
   (diminish 'eldoc-mode)
   (diminish 'visual-line-mode)
@@ -211,14 +204,14 @@
   :diminish
   :demand t
   :config
-  (ivy-mode 1)
+  (ivy-mode t)
   (setq ivy-use-virtual-buffers t)
   (setq enable-recursive-minibuffers t))
 
 (use-package which-key
   :diminish
   :config
-  (which-key-mode))
+  (which-key-mode t))
 
 (use-package expand-region
   :bind ("C-=" . er/expand-region))
@@ -252,7 +245,7 @@
 (use-package projectile
   :diminish
   :init
-  (projectile-mode +1)
+  (projectile-mode t)
   :bind (:map projectile-mode-map
               ("C-c p" . projectile-command-map))
   :config
@@ -271,10 +264,22 @@
          (lsp-mode . lsp-enable-which-key-integration))
   :commands lsp
   :config
-  ; lsp-mode performance boosting
-  ; Be sure to use emacs version 27+ compiled with native json support
+  (setq lsp-enable-on-type-formatting nil)
+  (setq lsp-enable-symbol-highlighting nil)
+  (setq lsp-headerline-breadcrumb-enable nil) ; Hide headerline
+  ;; lsp-mode performance boosting
+  ;; Be sure to use emacs version 27+ compiled with native json support
   (setq gc-cons-threshold 6400000)
   (setq read-process-output-max (* 1024 1024)))
+
+(use-package flycheck
+  :bind (("M-n" . flycheck-next-error)
+         ("M-p" . flycheck-previous-error)))
+(use-package company)
+(use-package yasnippet
+  :config
+  (yas-global-mode))
+(use-package yasnippet-snippets)
 
 (use-package ccls
   :config
@@ -287,17 +292,6 @@
 (use-package magit
   :bind ("C-c g" . magit-file-dispatch))
 
-;; Better asm-mode indentation
-(defun my-asm-mode-hook ()
-  (defun asm-calculate-indentation ()
-    (or
-     (and (looking-at "[.@_[:word:]]+:") 0)
-     (and (looking-at "\\s<\\s<\\s<") 0)
-     (and (looking-at "%") 0)
-     (and (looking-at "c?global\\|section\\|default\\|align\\|INIT_..X") 0)
-     (or 4))))
-(add-hook 'asm-mode-hook #'my-asm-mode-hook)
-
 ;; Delete current theme before loading new one
 (defadvice load-theme (before theme-dont-propagate activate)
   (mapc #'disable-theme custom-enabled-themes))
@@ -308,15 +302,16 @@
   :bind ("C-c w" . (lambda () (interactive) (load-theme 'ewal-spacemacs-classic t))) ; Ewal theme reloading keybind
   :init
   (setq spacemacs-theme-underline-parens t))
+(use-package doom-themes)
 
 ;; Function and keybind to toggle between dark and light theme
 (defun toggle-theme ()
   (interactive)
-  (if (eq (car custom-enabled-themes) 'ewal-spacemacs-classic)
+  (if (eq (car custom-enabled-themes) 'ewal-spacemacs-modern)
       (load-theme 'doom-one-light t)
     (load-theme 'ewal-spacemacs-classic t)))
 (global-set-key (kbd "C-c k") 'toggle-theme)
 
 ;; Finally, load default theme (dark)
-(load-theme 'ewal-spacemacs-classic t)
+(load-theme 'ewal-spacemacs-modern t)
 
