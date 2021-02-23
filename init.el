@@ -74,8 +74,9 @@
 (setq display-line-numbers-type 'relative)
 
 ;; Show time in modeline, without load average
-(display-time-mode t)
+;; Note that must enable the mode only after the configuration
 (setq display-time-default-load-average nil)
+(display-time-mode t)
 
 ;; y/n for yes/no
 (defalias 'yes-or-no-p 'y-or-n-p)
@@ -101,6 +102,7 @@
 ;; Don't auto-scale images
 (setq-default image-auto-resize 1)
 ;; Keybinds for ease of horizontal scrolling
+(require 'image-mode)
 (define-key image-mode-map (kbd "<tab>") 'image-scroll-left)
 (define-key image-mode-map (kbd "<backtab>") 'image-scroll-right)
 
@@ -235,9 +237,6 @@
   :config
   (which-key-mode t))
 
-(use-package expand-region
-  :bind ("C-=" . er/expand-region))
-
 (use-package emms
   :bind (("C-c e p" . emms-pause)
          ("C-c e f" . emms-next)
@@ -271,9 +270,13 @@
   :bind (:map projectile-mode-map
               ("C-c p" . projectile-command-map))
   :config
-  (setq projectile-switch-project-action #'projectile-dired)
+  ;; Ignore "build" directories
+  (setq projectile-indexing-method 'native)
+  (push '"build" projectile-globally-ignored-directories)
+  ;; Automatically parse all projects in ~/dev
   (when (file-directory-p "~/dev")
-    (setq projectile-project-search-path '("~/dev"))))
+    (setq projectile-project-search-path '("~/dev"))
+    (projectile-discover-projects-in-search-path)))
 
 (use-package lsp-mode
   :init
@@ -306,9 +309,12 @@
   :config
   (define-key lsp-mode-map [remap xref-find-apropos] #'lsp-ivy-workspace-symbol))
 
-(use-package flycheck)
-(use-package company)
+(use-package flycheck
+  :diminish)
+(use-package company
+  :diminish)
 (use-package yasnippet
+  :diminish (yas-global-mode yas-minor-mode)
   :config
   (yas-global-mode))
 (use-package yasnippet-snippets)
@@ -350,7 +356,7 @@
 ;; Temporary: Load local evil-motion-trainer package
 (add-to-list 'load-path "~/.emacs.d/local-packages")
 (load "evil-motion-trainer")
-(global-evil-motion-trainer-mode 1)
+(global-evil-motion-trainer-mode t)
 (setq evil-motion-trainer-threshold 1)
 (setq evil-motion-trainer-super-annoying-mode t)
 
