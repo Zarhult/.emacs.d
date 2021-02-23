@@ -67,6 +67,11 @@
 (scroll-bar-mode -1)
 (tool-bar-mode -1)
 (menu-bar-mode -1)
+(blink-cursor-mode 0)
+
+;; Relative line numbers, when programming only
+(add-hook 'prog-mode-hook 'display-line-numbers-mode)
+(setq display-line-numbers-type 'relative)
 
 ;; Show time in modeline, without load average
 (display-time-mode t)
@@ -94,7 +99,10 @@
 (global-prettify-symbols-mode t)
 
 ;; Don't auto-scale images
-(setq image-transform-resize 1)
+(setq-default image-auto-resize 1)
+;; Keybinds for ease of horizontal scrolling
+(define-key image-mode-map (kbd "<tab>") 'image-scroll-left)
+(define-key image-mode-map (kbd "<backtab>") 'image-scroll-right)
 
 ;; Use pdflatex
 (setq latex-run-command "pdflatex")
@@ -156,6 +164,10 @@
     (call-process "xdg-open" nil 0 nil file)))
 (define-key dired-mode-map (kbd "C-c o") 'dired-open-file)
 
+;; Launch image-dired buffer for thumbnails of all images in current directory
+(define-key dired-mode-map (kbd "C-t k") (lambda () (interactive) (image-dired ".")))
+(setq image-dired-show-all-from-dir-max-files 999)
+
 ;; Function and keybind to launch eshell in a new window
 (defun eshell-other-window ()
   "Launch eshell in another window, or switch to eshell buffer in another window if buffer exists."
@@ -186,13 +198,18 @@
 (global-set-key (kbd "C-c j p") 'org-timer-pause-or-continue)
 (global-set-key (kbd "C-c j k") 'org-timer-stop)
 
-;; Alternate keybind for backspace
-(global-set-key (kbd "C-;") 'delete-backward-char)
-
 ;; Make C-x k simply kill the current buffer without a prompt
 (global-set-key (kbd "C-x k") 'kill-this-buffer)
 
-;; Packages
+; Packages
+(use-package evil
+  :demand t
+  :config
+  ; Use evil for programming but emacs bindings everywhere else
+  (setq evil-default-state 'emacs)
+  (evil-set-initial-state 'prog-mode 'normal)
+  (evil-mode t))
+
 (use-package diminish
   :demand t ; Otherwise won't automatically diminish
   :config
@@ -207,6 +224,11 @@
   (ivy-mode t)
   (setq ivy-use-virtual-buffers t)
   (setq enable-recursive-minibuffers t))
+; Disabled due to evil
+; (use-package swiper
+;   :demand t ; Necessary for binding to work
+;   :config
+;   (global-set-key (kbd "C-s") 'swiper-isearch))
 
 (use-package which-key
   :diminish
@@ -224,7 +246,7 @@
          ("C-c e <right>" . (lambda () (interactive) (emms-seek 20)))
          ("C-c e <left>" . (lambda () (interactive) (emms-seek -20)))
          :map dired-mode-map
-         ("C-c e SPC" . emms-play-dired))
+         ("C-c e <spc>" . emms-play-dired))
   :config
   (require 'emms-setup)
   (require 'emms-player-mpv)
@@ -271,10 +293,20 @@
   ;; Be sure to use emacs version 27+ compiled with native json support
   (setq gc-cons-threshold 6400000)
   (setq read-process-output-max (* 1024 1024)))
+(use-package lsp-ui
+  :after lsp-mode
+  :config
+  (setq lsp-ui-sideline-enable nil)
+  (setq lsp-ui-doc-enable nil)
+  (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
+  (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references))
+(use-package lsp-ivy
+  :demand t ; Necessary for remap to work
+  :after lsp-mode ivy
+  :config
+  (define-key lsp-mode-map [remap xref-find-apropos] #'lsp-ivy-workspace-symbol))
 
-(use-package flycheck
-  :bind (("M-n" . flycheck-next-error)
-         ("M-p" . flycheck-previous-error)))
+(use-package flycheck)
 (use-package company)
 (use-package yasnippet
   :config
@@ -292,11 +324,11 @@
 (use-package magit
   :bind ("C-c g" . magit-file-dispatch))
 
+;; Themes
 ;; Delete current theme before loading new one
 (defadvice load-theme (before theme-dont-propagate activate)
   (mapc #'disable-theme custom-enabled-themes))
 
-;; Themes
 (use-package ewal)
 (use-package ewal-spacemacs-themes
   :bind ("C-c w" . (lambda () (interactive) (load-theme 'ewal-spacemacs-classic t))) ; Ewal theme reloading keybind
@@ -307,11 +339,18 @@
 ;; Function and keybind to toggle between dark and light theme
 (defun toggle-theme ()
   (interactive)
-  (if (eq (car custom-enabled-themes) 'ewal-spacemacs-modern)
+  (if (eq (car custom-enabled-themes) 'ewal-spacemacs-classic)
       (load-theme 'doom-one-light t)
     (load-theme 'ewal-spacemacs-classic t)))
 (global-set-key (kbd "C-c k") 'toggle-theme)
 
 ;; Finally, load default theme (dark)
-(load-theme 'ewal-spacemacs-modern t)
+(load-theme 'ewal-spacemacs-classic t)
+
+;; Temporary: Load local evil-motion-trainer package
+(add-to-list 'load-path "~/.emacs.d/local-packages")
+(load "evil-motion-trainer")
+(global-evil-motion-trainer-mode 1)
+(setq evil-motion-trainer-threshold 1)
+(setq evil-motion-trainer-super-annoying-mode t)
 
