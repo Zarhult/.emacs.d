@@ -64,14 +64,16 @@
 (load custom-file)
 
 ;; Cleaner ui
-(scroll-bar-mode -1)
+(if (display-graphic-p) ; Otherwise may cause init error in terminal emacs
+    (scroll-bar-mode -1))
 (tool-bar-mode -1)
 (menu-bar-mode -1)
 (blink-cursor-mode 0)
 
-;; Relative line numbers, when programming only
-(add-hook 'prog-mode-hook 'display-line-numbers-mode)
-(setq display-line-numbers-type 'relative)
+;; Relative line numbers, for text/programming only
+;(add-hook 'text-mode-hook 'display-line-numbers-mode)
+;(add-hook 'prog-mode-hook 'display-line-numbers-mode)
+;(setq display-line-numbers-type 'relative)
 
 ;; Show time in modeline, without load average
 ;; Note that must enable the mode only after the configuration
@@ -120,7 +122,7 @@
 (setq eshell-prefer-lisp-functions t)
 (setq eshell-prefer-lisp-variables t)
 
-;; Non-package-related keybindings and related configuration
+;;; Non-package-related keybindings and related configuration
 ;; Automatically move cursor into newly created windows
 (defun split-and-follow-horizontally ()
   "Split horizontally and move the cursor into the new window."
@@ -204,14 +206,6 @@
 (global-set-key (kbd "C-x k") 'kill-this-buffer)
 
 ; Packages
-(use-package evil
-  :demand t
-  :config
-  ; Use evil for programming but emacs bindings everywhere else
-  (setq evil-default-state 'emacs)
-  (evil-set-initial-state 'prog-mode 'normal)
-  (evil-mode t))
-
 (use-package diminish
   :demand t ; Otherwise won't automatically diminish
   :config
@@ -226,11 +220,6 @@
   (ivy-mode t)
   (setq ivy-use-virtual-buffers t)
   (setq enable-recursive-minibuffers t))
-; Disabled due to evil
-; (use-package swiper
-;   :demand t ; Necessary for binding to work
-;   :config
-;   (global-set-key (kbd "C-s") 'swiper-isearch))
 
 (use-package which-key
   :diminish
@@ -245,7 +234,7 @@
          ("C-c e <right>" . (lambda () (interactive) (emms-seek 20)))
          ("C-c e <left>" . (lambda () (interactive) (emms-seek -20)))
          :map dired-mode-map
-         ("C-c e <spc>" . emms-play-dired))
+         ("C-c e <SPC>" . emms-play-dired))
   :config
   (require 'emms-setup)
   (require 'emms-player-mpv)
@@ -309,15 +298,9 @@
   :config
   (define-key lsp-mode-map [remap xref-find-apropos] #'lsp-ivy-workspace-symbol))
 
-(use-package flycheck
-  :diminish)
 (use-package company
   :diminish)
-(use-package yasnippet
-  :diminish (yas-global-mode yas-minor-mode)
-  :config
-  (yas-global-mode))
-(use-package yasnippet-snippets)
+(use-package yasnippet) ; Necessary for html completion
 
 (use-package ccls
   :config
@@ -352,11 +335,3 @@
 
 ;; Finally, load default theme (dark)
 (load-theme 'ewal-spacemacs-classic t)
-
-;; Temporary: Load local evil-motion-trainer package
-(add-to-list 'load-path "~/.emacs.d/local-packages")
-(load "evil-motion-trainer")
-(global-evil-motion-trainer-mode t)
-(setq evil-motion-trainer-threshold 1)
-(setq evil-motion-trainer-super-annoying-mode t)
-
