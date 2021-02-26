@@ -262,6 +262,8 @@
   ;; Ignore "build" directories
   (setq projectile-indexing-method 'native)
   (push '"build" projectile-globally-ignored-directories)
+  (push '"CMakeFiles" projectile-globally-ignored-directories)
+  (push '"Debug" projectile-globally-ignored-directories)  
   ;; Automatically parse all projects in ~/dev
   (when (file-directory-p "~/dev")
     (setq projectile-project-search-path '("~/dev"))
@@ -270,7 +272,7 @@
 (use-package lsp-mode
   :init
   (setq lsp-keymap-prefix "C-c l")
-  :hook (((c-mode c++-mode objc-mode) . lsp) ; Must install ccls externally
+  :hook (((c-mode c++-mode objc-mode) . lsp) ; Must have ccls, clangd, or similar installed
          (html-mode . lsp) ; To install server: "npm install -g vscode-html-languageserver-bin"
          (css-mode . lsp) ; To install server: "npm install -g vscode-css-languageserver-bin"
          (js-mode . lsp) ; To install server: "npm install -g typescript-language-server; npm install -g typescript"
@@ -301,14 +303,6 @@
 (use-package company
   :diminish)
 (use-package yasnippet) ; Necessary for html completion
-
-(use-package ccls
-  :config
-  (defun ccls-cmake ()
-    "Generate compile_commands.json from a directory where CMake has been run."
-    (interactive)
-    (shell-command "cmake -H. -BDebug -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=YES")
-    (shell-command "ln -sf Debug/compile_commands.json .")))
 
 (use-package magit
   :bind ("C-c g" . magit-file-dispatch))
