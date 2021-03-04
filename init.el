@@ -11,6 +11,7 @@
 (defun startup/reset-gc () (setq gc-cons-threshold startup/gc-cons-threshold))
 (add-hook 'emacs-startup-hook 'startup/reset-gc)
 
+;;; Set up use-package
 ;; Ensure package.el is loaded
 (require 'package)
 
@@ -39,6 +40,29 @@
   (setq auto-package-update-hide-results t)
   (auto-package-update-maybe))
 
+;;; Themes
+;; Delete current theme before loading new one
+(defadvice load-theme (before theme-dont-propagate activate)
+  (mapc #'disable-theme custom-enabled-themes))
+
+(use-package doom-themes)
+(use-package cherry-blossom-theme)
+
+(defvar dark-theme 'my-manoj-dark) ; Default dark theme
+(defvar light-theme 'doom-one-light) ; Default light theme
+
+;; Function and keybind to toggle between dark and light theme
+(defun toggle-theme ()
+  (interactive)
+  (if (eq (car custom-enabled-themes) dark-theme)
+      (load-theme light-theme t)
+    (load-theme dark-theme t)))
+(global-set-key (kbd "C-c k") 'toggle-theme)
+
+;; Load dark theme by default
+(load-theme dark-theme t)
+
+;;; General configuration
 ;; Highlight matching parens
 (show-paren-mode t)
 
@@ -63,17 +87,8 @@
 (setq custom-file "~/.emacs.d/custom.el")
 (load custom-file)
 
-;; Cleaner ui
-(if (display-graphic-p) ; Otherwise may cause init error in terminal emacs
-    (scroll-bar-mode -1))
-(tool-bar-mode -1)
-(menu-bar-mode -1)
+;; Don't blink cursor
 (blink-cursor-mode -1)
-
-;; Relative line numbers, for text/programming only
-;(add-hook 'text-mode-hook 'display-line-numbers-mode)
-;(add-hook 'prog-mode-hook 'display-line-numbers-mode)
-;(setq display-line-numbers-type 'relative)
 
 ;; Show time in modeline, without load average
 ;; Note that must enable the mode only after the configuration
@@ -92,7 +107,7 @@
 (setq-default c-basic-offset 4)
 (setq-default c-default-style "linux")
 
-;; Don't clutter filesystem
+;; Don't clutter filesystem with backups (store them in /tmp/)
 (setq backup-directory-alist
       `((".*" . ,temporary-file-directory)))
 (setq auto-save-file-name-transforms
@@ -201,7 +216,7 @@
 ;; Make C-x k simply kill the current buffer without a prompt
 (global-set-key (kbd "C-x k") 'kill-this-buffer)
 
-; Packages
+;;; Packages - general
 (use-package diminish
   :demand t ; Otherwise won't automatically diminish
   :config
@@ -254,7 +269,7 @@
   :config
   (pdf-tools-install))
 
-;; Programming stuff/packages
+;;; Packages - programming
 (use-package projectile
   :diminish
   :init
@@ -315,26 +330,3 @@
 
 (use-package magit
   :bind ("C-c g" . magit-file-dispatch))
-
-;;; Themes
-;; Delete current theme before loading new one
-(defadvice load-theme (before theme-dont-propagate activate)
-  (mapc #'disable-theme custom-enabled-themes))
-
-(use-package doom-themes)
-(use-package cherry-blossom-theme)
-(use-package grandshell-theme)
-
-(defvar dark-theme 'my-manoj-dark) ; Default dark theme
-(defvar light-theme 'doom-one-light) ; Default light theme
-
-;; Function and keybind to toggle between dark and light theme
-(defun toggle-theme ()
-  (interactive)
-  (if (eq (car custom-enabled-themes) dark-theme)
-      (load-theme light-theme t)
-    (load-theme dark-theme t)))
-(global-set-key (kbd "C-c k") 'toggle-theme)
-
-;; Load dark theme by default
-(load-theme dark-theme t)
