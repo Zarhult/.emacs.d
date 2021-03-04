@@ -46,7 +46,7 @@
 (column-number-mode t)
 
 ;; Font size
-(set-face-attribute 'default nil :height 140)
+(set-face-attribute 'default nil :height 120)
 
 ;; Set Japanese font (if not in terminal emacs)
 (if (display-graphic-p)
@@ -68,7 +68,7 @@
     (scroll-bar-mode -1))
 (tool-bar-mode -1)
 (menu-bar-mode -1)
-(blink-cursor-mode 0)
+(blink-cursor-mode -1)
 
 ;; Relative line numbers, for text/programming only
 ;(add-hook 'text-mode-hook 'display-line-numbers-mode)
@@ -103,7 +103,7 @@
 
 ;; Don't auto-scale images
 (setq-default image-auto-resize 1)
-;; Keybinds for ease of horizontal scrolling
+;; Keybinds for ease of horizontal scrolling of images
 (require 'image-mode)
 (define-key image-mode-map (kbd "<tab>") 'image-scroll-left)
 (define-key image-mode-map (kbd "<backtab>") 'image-scroll-right)
@@ -111,18 +111,14 @@
 ;; Use pdflatex
 (setq latex-run-command "pdflatex")
 
-;; gdb/gud configuration
+;; gdb/gud configuration (show source code alongside gud buffer by default)
 (setq gdb-show-main t)
 
-;; Cache passwords for 5 minutes, and do so in eshell with tramp
+;; Cache passwords for 5 minutes
 (setq password-cache t)
 (setq password-cache-expiry 300)
-(require 'em-tramp)
-(add-to-list 'eshell-modules-list 'eshell-tramp)
-(setq eshell-prefer-lisp-functions t)
-(setq eshell-prefer-lisp-variables t)
 
-;;; Non-package-related keybindings and related configuration
+;;; Non-package-related keybindings, and related configuration
 ;; Automatically move cursor into newly created windows
 (defun split-and-follow-horizontally ()
   "Split horizontally and move the cursor into the new window."
@@ -221,6 +217,13 @@
   (setq ivy-use-virtual-buffers t)
   (setq enable-recursive-minibuffers t))
 
+(use-package avy
+  :bind (("C-;" . avy-goto-word-or-subword-1)
+         ("C-M-;" . avy-goto-line)))
+
+(use-package expand-region
+  :bind ("C-=" . er/expand-region))
+
 (use-package which-key
   :diminish
   :config
@@ -280,8 +283,12 @@
          (lsp-mode . lsp-enable-which-key-integration))
   :commands lsp
   :config
+  ;; Override default lsp M-n/M-p bindings
+  (require 'flymake)
+  (define-key flymake-mode-map (kbd "M-n") 'flymake-goto-next-error)
+  (define-key flymake-mode-map (kbd "M-p") 'flymake-goto-prev-error)
+  ;; Disable some functionality
   (setq lsp-enable-on-type-formatting nil)
-  (setq lsp-enable-symbol-highlighting nil)
   (setq lsp-headerline-breadcrumb-enable nil) ; Hide headerline
   ;; lsp-mode performance boosting
   ;; Be sure to use emacs version 27+ compiled with native json support
@@ -302,30 +309,32 @@
 
 (use-package company
   :diminish)
-(use-package yasnippet) ; Necessary for html completion
+(use-package yasnippet
+  :config
+  (yas-global-mode t)) ; Necessary for html completion
 
 (use-package magit
   :bind ("C-c g" . magit-file-dispatch))
 
-;; Themes
+;;; Themes
 ;; Delete current theme before loading new one
 (defadvice load-theme (before theme-dont-propagate activate)
   (mapc #'disable-theme custom-enabled-themes))
 
-(use-package ewal)
-(use-package ewal-spacemacs-themes
-  :bind ("C-c w" . (lambda () (interactive) (load-theme 'ewal-spacemacs-classic t))) ; Ewal theme reloading keybind
-  :init
-  (setq spacemacs-theme-underline-parens t))
 (use-package doom-themes)
+(use-package cherry-blossom-theme)
+(use-package grandshell-theme)
+
+(defvar dark-theme 'my-manoj-dark) ; Default dark theme
+(defvar light-theme 'doom-one-light) ; Default light theme
 
 ;; Function and keybind to toggle between dark and light theme
 (defun toggle-theme ()
   (interactive)
-  (if (eq (car custom-enabled-themes) 'ewal-spacemacs-classic)
-      (load-theme 'doom-one-light t)
-    (load-theme 'ewal-spacemacs-classic t)))
+  (if (eq (car custom-enabled-themes) dark-theme)
+      (load-theme light-theme t)
+    (load-theme dark-theme t)))
 (global-set-key (kbd "C-c k") 'toggle-theme)
 
-;; Finally, load default theme (dark)
-(load-theme 'ewal-spacemacs-classic t)
+;; Load dark theme by default
+(load-theme dark-theme t)
