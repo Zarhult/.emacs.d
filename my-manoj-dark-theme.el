@@ -582,6 +582,11 @@ jarring angry fruit salad look to reduce eye fatigue.")
  '(man-xref ((t (:underline t))))
  '(match ((t (:background "RoyalBlue3"))))
  '(minibuffer-prompt ((t (:foreground "cyan"))))
+ '(mode-line ((t (:background "grey10" :foreground "LightSteelBlue"))))
+ '(mode-line-emphasis ((t (:bold t :weight bold))))
+ '(mode-line-highlight ((t (:box (:line-width 2 :color "60"
+                                              :style released-button)))))
+ '(mode-line-inactive ((t (:background "black" :foreground "grey20"))))
 ; '(mode-line ((t (:background "grey75" :foreground "Blue"
 ;                  :box '(:line-width -1 :style released-button)
 ;                  :height 0.9))))
@@ -679,6 +684,11 @@ jarring angry fruit salad look to reduce eye fatigue.")
  '(vm-mime-button-face  ((t (:background "grey75" :foreground "black" :box (:line-width 2 :style released-button)))))
  '(vm-summary-highlight-face  ((t (:bold t :weight bold))))
  '(vm-xface ((t (:background "white" :foreground "black"))))
+
+; '(avy-lead-face ((t (:background "mediumspringgreen" :foreground "black" :weight bold))))
+; '(avy-lead-face-0 ((t (:background "violet" :inherit 'avy-lead-face))))
+; '(avy-lead-face-1 ((t (:background "Aquamarine" :inherit 'avy-lead-face))))
+; '(avy-lead-face-2 ((t (:background "yellow1" :inherit 'avy-lead-face))))
 
  '(which-func ((t (:foreground "Blue1"))))
  '(widget ((t (:height 1.2 :background "Gray80" :foreground "black"))))
