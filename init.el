@@ -1,7 +1,6 @@
 ;; Increase garbage collection and temporarily unset file-name-handler-alist
 ;; during startup, for faster launch
-(defvar last-file-name-handler-alist file-name-handler-alist)
-(setq startup-gc-cons-threshold gc-cons-threshold)
+(setq startup-file-name-handler-alist file-name-handler-alist)
 (setq startup-gc-cons-percentage gc-cons-percentage)
 
 (setq gc-cons-threshold most-positive-fixnum
@@ -9,9 +8,9 @@
       file-name-handler-alist nil)
 
 (defun startup-reset ()
-  (setq gc-cons-threshold startup-gc-cons-threshold
+  (setq gc-cons-threshold 6400000
         gc-cons-percentage startup-gc-cons-percentage
-        file-name-handler-alist last-file-name-handler-alist))
+        file-name-handler-alist startup-file-name-handler-alist))
 (add-hook 'emacs-startup-hook #'startup-reset)
 
 ;;; Set up package installation necessities
@@ -19,13 +18,16 @@
 (require 'package)
 (add-to-list 'package-archives
              '("melpa" . "https://melpa.org/packages/"))
-;; If auto-package-update is not installed, treat this as a fresh install
+
+;; If auto-package-update is not installed, mark this as a fresh install
 ;; and refresh package contents before continuing
+(setq fresh-install nil)
 (unless (package-installed-p 'auto-package-update)
-  (package-refresh-contents))
+  (package-refresh-contents)
+  (setq fresh-install t))
 
 (defun install-if-not-installed (package)
-  "Checks if given package is installed and installs it if not."
+  "Check if PACKAGE is installed and install it if not."
   (unless (package-installed-p package)
     (package-install package)))
 
@@ -36,21 +38,25 @@
 (auto-package-update-maybe)
 
 ;;; Themes
-;; Delete current theme before loading new one
-(defadvice load-theme (before theme-dont-propagate activate)
-  (mapc #'disable-theme custom-enabled-themes))
+(defun disable-all-themes ()
+  "Disable all active themes."
+  (dolist (theme custom-enabled-themes)
+    (disable-theme theme)))
 
 (install-if-not-installed 'cherry-blossom-theme)
 (install-if-not-installed 'gruvbox-theme)
 
-(defvar my-dark-theme 'cherry-blossom) ; Default dark theme
-(defvar my-light-theme 'leuven) ; Default light theme
+(setq my-dark-theme 'cherry-blossom) ; Default dark theme
+(setq my-light-theme 'leuven) ; Default light theme
 
 ;; Function and keybind to toggle between dark and light theme
 (defun toggle-theme ()
   (interactive)
   (if (eq (car custom-enabled-themes) my-dark-theme)
-      (load-theme my-light-theme t)
+      (progn
+        (disable-all-themes)
+        (load-theme my-light-theme t))
+    (disable-all-themes)
     (load-theme my-dark-theme t)))
 (define-key global-map (kbd "C-c k") 'toggle-theme)
 
@@ -139,9 +145,26 @@
 (add-to-list 'auto-mode-alist '("/[^\\./]*\\'" . text-mode))
 
 ;; Relative line numbers, when text editing only
-(add-hook 'prog-mode-hook 'display-line-numbers-mode)
-(add-hook 'text-mode-hook 'display-line-numbers-mode)
-(setq display-line-numbers-type 'relative)
+;; (add-hook 'prog-mode-hook 'display-line-numbers-mode)
+;; (add-hook 'text-mode-hook 'display-line-numbers-mode)
+;; (setq display-line-numbers-type 'relative)
+
+;; Better asm-mode indentation
+(defun my-asm-mode-hook ()
+  "Hook to override default asm-mode indentation function."
+  (defun asm-calculate-indentation ()
+    (or
+     ;; Flush labels to the left margin.
+     (and (looking-at "\\(\\.\\|\\sw\\|\\s_\\)+:") 0)
+     (and (looking-at "[.@_[:word:]]+:") 0)
+     ;; Same thing for `;;;' comments.
+     (and (looking-at "\\s<\\s<\\s<") 0)
+     ;; %if nasm macro stuff goes to the left margin
+     (and (looking-at "%") 0)
+     (and (looking-at "c?global\\|section\\|default\\|align\\|INIT_..X") 0)
+     ;; The rest goes at column 4
+     (or 4))))
+(add-hook 'asm-mode-hook #'my-asm-mode-hook)
 
 ;;; My main functions
 (defun split-and-follow-horizontally ()
@@ -156,6 +179,29 @@
   (split-window-right)
   (balance-windows)
   (other-window 1))
+
+(defun tenth-next-line ()
+  "Move cursor vertically down 10 lines by setting current-prefix-arg
+before calling next-line."
+  (interactive)
+  (if current-prefix-arg
+      (progn
+        (if (eq current-prefix-arg '-)
+            (setq current-prefix-arg -10)
+          (setq current-prefix-arg (* current-prefix-arg 10))))
+    (setq current-prefix-arg 10))
+  (call-interactively 'next-line))
+(defun tenth-previous-line ()
+  "Move cursor vertically up 10 lines by setting current-prefix-arg
+before calling previous-line."
+  (interactive)
+  (if current-prefix-arg
+      (progn
+        (if (eq current-prefix-arg '-)
+            (setq current-prefix-arg -10)
+          (setq current-prefix-arg (* current-prefix-arg 10))))
+    (setq current-prefix-arg 10))
+  (call-interactively 'previous-line))
 
 (defun reload-current-dired-buffer ()
   "Reload current `dired-mode' buffer"
@@ -228,26 +274,11 @@ another window if it already exists."
   (interactive)
   (image-dired "."))
 
-;; Better asm-mode indentation
-(defun my-asm-mode-hook ()
-  "Hook to override default asm-mode indentation function."
-  (defun asm-calculate-indentation ()
-    (or
-     ;; Flush labels to the left margin.
-     (and (looking-at "\\(\\.\\|\\sw\\|\\s_\\)+:") 0)
-     (and (looking-at "[.@_[:word:]]+:") 0)
-     ;; Same thing for `;;;' comments.
-     (and (looking-at "\\s<\\s<\\s<") 0)
-     ;; %if nasm macro stuff goes to the left margin
-     (and (looking-at "%") 0)
-     (and (looking-at "c?global\\|section\\|default\\|align\\|INIT_..X") 0)
-     ;; The rest goes at column 4
-     (or 4))))
-(add-hook 'asm-mode-hook #'my-asm-mode-hook)
-
 ;;; Keybinds - for my functions
 (define-key global-map (kbd "C-x 2") 'split-and-follow-horizontally)
 (define-key global-map (kbd "C-x 3") 'split-and-follow-vertically)
+(define-key global-map (kbd "C-;")   'tenth-next-line)
+(define-key global-map (kbd "C-M-;") 'tenth-previous-line)
 (define-key global-map (kbd "C-c s") 'eshell-other-window)
 (define-key global-map (kbd "C-c a") 'ansi-term-other-window)
 (define-key global-map (kbd "C-c d") 'dired-other-window-current-directory)
@@ -269,25 +300,32 @@ another window if it already exists."
   (autoload func "org-timer"))
 (define-prefix-command 'org-timer-map)
 (define-key global-map (kbd "C-c j") 'org-timer-map)
-(define-key 'org-timer-map (kbd "s") 'org-timer-set-timer)
-(define-key 'org-timer-map (kbd "p") 'org-timer-pause-or-continue)
-(define-key 'org-timer-map (kbd "k") 'org-timer-stop)
+(define-key org-timer-map (kbd "s") 'org-timer-set-timer)
+(define-key org-timer-map (kbd "p") 'org-timer-pause-or-continue)
+(define-key org-timer-map (kbd "k") 'org-timer-stop)
 
 ;;; Packages - general
 ;; (install-if-not-installed 'evil)
 ;; (require 'evil)
-;; (with-eval-after-load 'evil
-;;   (setq evil-insert-state-cursor t)
-;;   ;; Use evil for text editing only
-;;   (setq evil-default-state 'emacs)
-;;   (evil-set-initial-state 'prog-mode 'normal)
-;;   (evil-set-initial-state 'text-mode 'normal)
-;;   (evil-mode t))
+;; (setq evil-insert-state-cursor t
+;;       evil-motion-state-cursor t
+;;       evil-operator-state-cursor t
+;;       evil-visual-state-cursor t
+;;       evil-replace-state-cursor t)
+;; ;; Use evil for text editing only
+;; (setq evil-default-state 'emacs)
+;; (evil-set-initial-state 'prog-mode 'normal)
+;; (evil-set-initial-state 'text-mode 'normal)
+;; (evil-mode t)
+
+;; (load-file "~/.emacs.d/evil-motion-trainer.el")
+;; (global-evil-motion-trainer-mode 1)
+;; (setq evil-motion-trainer-threshold 1)
 
 (install-if-not-installed 'diminish)
 ;; First diminish built-in visual-line-mode without an eval-after-load
 (diminish 'visual-line-mode)
-;; Now diminish modes that need to be diminished only after they load
+;; Now diminish modes that should be diminished only after they load
 (with-eval-after-load 'which-key
   (diminish 'which-key-mode))
 (with-eval-after-load 'eldoc
@@ -299,10 +337,6 @@ another window if it already exists."
 (with-eval-after-load 'projectile
   (diminish 'projectile-mode))
 
-(install-if-not-installed 'avy)
-(define-key global-map (kbd "C-;") 'avy-goto-char)
-(define-key global-map (kbd "C-M-;") 'avy-goto-line)
-
 (install-if-not-installed 'expand-region)
 (define-key global-map (kbd "C-=") 'er/expand-region)
 
@@ -312,52 +346,65 @@ another window if it already exists."
 (install-if-not-installed 'emms)
 (define-prefix-command 'emms-map)
 (define-key global-map (kbd "C-c e") 'emms-map)
-(define-key 'emms-map (kbd "p") 'emms-pause)
-(define-key 'emms-map (kbd "f") 'emms-next)
-(define-key 'emms-map (kbd "b") 'emms-previous)
-(define-key 'emms-map (kbd "s") 'emms-stop)
-(define-key 'emms-map (kbd "<right>") 'emms-seek-forward)
-(define-key 'emms-map (kbd "<left>") 'emms-seek-backward)
-(define-key 'emms-map (kbd "SPC") 'emms-play-dired)
-(emms-all)
-(setq emms-player-list '(emms-player-mpv))
+(define-key emms-map (kbd "p") 'emms-pause)
+(define-key emms-map (kbd "f") 'emms-next)
+(define-key emms-map (kbd "b") 'emms-previous)
+(define-key emms-map (kbd "s") 'emms-stop)
+(define-key emms-map (kbd "<right>") 'emms-seek-forward)
+(define-key emms-map (kbd "<left>") 'emms-seek-backward)
+(define-key emms-map (kbd "SPC") 'emms-play-dired)
+(setq my-emms-setup-ran nil)
+(defun my-emms-setup ()
+  "Set up emms for simple playing of music with mpv, showing the filename and
+time position in the modeline. Only runs if my-emms-setup-ran is nil, and
+sets it to t afterward."
+  (unless my-emms-setup-ran
+    (require 'emms-source-file)
+    (require 'emms-source-playlist)
+    (require 'emms-player-simple)
+    (require 'emms-player-mpv)
+    (require 'emms-mode-line)
+    (require 'emms-playing-time)
+    (emms-mode-line 1)
+    (emms-mode-line-blank)
+    (emms-playing-time 1)
+    (setq emms-player-list '(emms-player-mpv))
+    (setq my-emms-setup-ran t)))
+;; Since these are all the emms functions I use, just setup emms when I try
+;; to call one of them
+(dolist (func '(emms-pause
+                emms-next
+                emms-previous
+                emms-stop
+                emms-seek-forward
+                emms-seek-backward
+                emms-play-dired))
+  (advice-add func :before #'my-emms-setup))
 
 (install-if-not-installed 'nov)
 (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
 
-;; Note for pdf-tools, must install app-text/poppler
-;; with "cairo" use flag on gentoo
+;; Note that for pdf-tools, if on Gentoo, must install
+;; app-text/poppler with "cairo" use flag
 (install-if-not-installed 'pdf-tools)
 (add-hook 'pdf-view-mode-hook #'pdf-view-midnight-minor-mode)
-(pdf-tools-install)
+(when fresh-install
+  (pdf-tools-install))
 
 ;;; Packages - programming
-(install-if-not-installed 'projectile)
-(projectile-mode t)
-(define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
-;; Ignore directories commonly associated with building
-(setq projectile-indexing-method 'native)
-(push '"build" projectile-globally-ignored-directories)
-(push '"CMakeFiles" projectile-globally-ignored-directories)
-(push '"Debug" projectile-globally-ignored-directories)
-;; Automatically parse all projects in ~/dev
-(when (file-directory-p "~/dev")
-  (setq projectile-project-search-path '("~/dev"))
-  (projectile-discover-projects-in-search-path))
-
 (install-if-not-installed 'lsp-mode)
 (setq lsp-keymap-prefix "C-c l")
-;; Hook into lsp-mode for each mode hook listed below
-;; Language servers must be installed externally for lsp to work
+;; Hook into lsp-mode for each mode hook listed below.
+;; Language servers must be installed externally for lsp to work.
 ;; C/C++: Must have ccls, clangd, or similar installed
 ;; html: "npm install -g vscode-html-languageserver-bin"
 ;; css: "npm install -g vscode-css-languageserver-bin"
 ;; js: "npm install -g typescript-language-server; npm install -g typescript"
 ;; python: "pip install 'python-language-server[all]'"
-(defvar lsp-mode-hooks '(c-mode-hook c++-mode-hook objc-mode-hook
-                         html-mode-hook css-mode-hook js-mode-hook
-                         python-mode-hook))
-(dolist (hook lsp-mode-hooks)
+(setq my-lsp-mode-hooks '(c-mode-hook c++-mode-hook objc-mode-hook
+                                     html-mode-hook css-mode-hook js-mode-hook
+                                     python-mode-hook))
+(dolist (hook my-lsp-mode-hooks)
   (add-hook hook #'lsp-deferred))
 (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration)
 ;; Disable some functionality
@@ -372,8 +419,7 @@ another window if it already exists."
       lsp-css-lint-float t
       lsp-css-lint-id-selector t)
 ;; lsp-mode performance boosting
-;; Be sure to use emacs version 27+ compiled with native json support
-(setq gc-cons-threshold 6400000)
+;; Be sure also to use emacs version 27+ compiled with native json support
 (setq read-process-output-max (* 1024 1024))
 
 (with-eval-after-load 'flymake
@@ -384,15 +430,51 @@ another window if it already exists."
 (with-eval-after-load 'lsp-ui
   (setq lsp-ui-sideline-enable nil)
   (setq lsp-ui-doc-enable nil)
-  (define-key lsp-ui-mode-map [remap xref-find-definitions]
-    'lsp-ui-peek-find-definitions)
-  (define-key lsp-ui-mode-map [remap xref-find-references]
-    'lsp-ui-peek-find-references))
+  (define-key lsp-ui-mode-map (kbd "M-.") 'lsp-ui-peek-find-definitions)
+  (define-key lsp-ui-mode-map (kbd "M-?") 'lsp-ui-peek-find-references))
 
 (install-if-not-installed 'company)
 
+;; Need yasnippet for html completion
 (install-if-not-installed 'yasnippet)
-(yas-global-mode t) ; Need yasnippet for html completion
+(add-hook 'lsp-mode-hook #'yas-global-mode)
+
+(install-if-not-installed 'projectile)
+;; Load and set up projectile only after either lsp-mode is enabled (enter
+;; a project) or an attempt at using a projectile keybind is made
+(setq my-projectile-prefix (kbd "C-c p"))
+(setq my-projectile-setup-ran nil)
+(defun setup-projectile-with-prefix (prefix)
+  "Unbind any previous global PREFIX binding, and load and enable projectile
+mode with PREFIX bound to projectile-command-map within projectile-mode-map.
+Only runs if my-projectile-setup-ran is nil, and sets it to t afterward."
+  (unless my-projectile-setup-ran
+    (interactive)
+    (projectile-mode t)
+    (define-key global-map my-projectile-prefix nil)
+    (define-key projectile-mode-map my-projectile-prefix 'projectile-command-map)
+    (setq my-projectile-setup-ran t)))
+(define-key global-map my-projectile-prefix
+  (lambda () (interactive)
+    (setup-projectile-with-prefix my-projectile-prefix)
+    ;; Re-input the prefix so the command input can smoothly continue after
+    ;; projectile loads
+    (setq unread-command-events
+          (mapcar (lambda (e) `(t . ,e))
+                  (listify-key-sequence my-projectile-prefix)))))
+(add-hook 'lsp-mode-hook
+          (lambda () (interactive)
+            (setup-projectile-with-prefix my-projectile-prefix)))
+(with-eval-after-load 'projectile
+  ;; Ignore directories commonly associated with building
+  (setq projectile-indexing-method 'native)
+  (push '"build" projectile-globally-ignored-directories)
+  (push '"CMakeFiles" projectile-globally-ignored-directories)
+  (push '"Debug" projectile-globally-ignored-directories)
+  ;; Automatically parse all projects in ~/dev
+  (when (file-directory-p "~/dev")
+    (setq projectile-project-search-path '("~/dev"))
+    (projectile-discover-projects-in-search-path)))
 
 (install-if-not-installed 'magit)
 (define-key global-map (kbd "C-c g") 'magit-file-dispatch)
