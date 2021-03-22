@@ -43,10 +43,14 @@
   (dolist (theme custom-enabled-themes)
     (disable-theme theme)))
 
-(install-if-not-installed 'cherry-blossom-theme)
-(install-if-not-installed 'gruvbox-theme)
+;; Install some cool themes
+(dolist (theme '(cherry-blossom-theme
+                 soothe-theme
+                 clues-theme
+                 gruvbox-theme))
+  (install-if-not-installed theme))
 
-(setq my-dark-theme 'cherry-blossom) ; Default dark theme
+(setq my-dark-theme 'soothe) ; Default dark theme
 (setq my-light-theme 'leuven) ; Default light theme
 
 ;; Function and keybind to toggle between dark and light theme
@@ -82,6 +86,19 @@
     (dolist (charset '(kana han symbol cjk-misc bopomofo))
       (set-fontset-font (frame-parameter nil 'font) charset
                         (font-spec :family "IPAGothic"))))
+
+;; Japanese input with mozc
+(define-key global-map (kbd "C-`") 'toggle-input-method)
+(defun my-mozc-setup ()
+  "Set up mozc for Japanese input using echo-area candidate windows. Do nothing
+if mozc is already loaded."
+  (interactive)
+  (unless (featurep 'mozc)
+    (require 'mozc)
+    (set-language-environment "Japanese")
+    (setq default-input-method "japanese-mozc")
+    (setq mozc-candidate-style 'echo-area)))
+(advice-add 'toggle-input-method :before #'my-mozc-setup)
 
 ;; Enable visual line mode, mainly to hide arrow icons
 (global-visual-line-mode t)
@@ -138,7 +155,6 @@
 
 ;; Fuzzy-matching, etc
 (setq completion-styles '(initials partial-completion flex))
-(setq completion-cycle-threshold 10)
 
 ;; Make .conf files and extensionless files trigger text-mode
 (add-to-list 'auto-mode-alist '("\\.conf\\'" . text-mode))
@@ -180,27 +196,27 @@
   (balance-windows)
   (other-window 1))
 
-(defun tenth-next-line ()
-  "Move cursor vertically down 10 lines by setting current-prefix-arg
+(defun fifth-next-line ()
+  "Move cursor vertically down 5 lines by setting current-prefix-arg
 before calling next-line."
   (interactive)
   (if current-prefix-arg
       (progn
         (if (eq current-prefix-arg '-)
-            (setq current-prefix-arg -10)
-          (setq current-prefix-arg (* current-prefix-arg 10))))
-    (setq current-prefix-arg 10))
+            (setq current-prefix-arg -5)
+          (setq current-prefix-arg (* current-prefix-arg 5))))
+    (setq current-prefix-arg 5))
   (call-interactively 'next-line))
-(defun tenth-previous-line ()
+(defun fifth-previous-line ()
   "Move cursor vertically up 10 lines by setting current-prefix-arg
 before calling previous-line."
   (interactive)
   (if current-prefix-arg
       (progn
         (if (eq current-prefix-arg '-)
-            (setq current-prefix-arg -10)
-          (setq current-prefix-arg (* current-prefix-arg 10))))
-    (setq current-prefix-arg 10))
+            (setq current-prefix-arg -5)
+          (setq current-prefix-arg (* current-prefix-arg 5))))
+    (setq current-prefix-arg 5))
   (call-interactively 'previous-line))
 
 (defun reload-current-dired-buffer ()
@@ -277,8 +293,8 @@ another window if it already exists."
 ;;; Keybinds - for my functions
 (define-key global-map (kbd "C-x 2") 'split-and-follow-horizontally)
 (define-key global-map (kbd "C-x 3") 'split-and-follow-vertically)
-(define-key global-map (kbd "C-;")   'tenth-next-line)
-(define-key global-map (kbd "C-M-;") 'tenth-previous-line)
+(define-key global-map (kbd "C-;")   'fifth-next-line)
+(define-key global-map (kbd "C-M-;") 'fifth-previous-line)
 (define-key global-map (kbd "C-c s") 'eshell-other-window)
 (define-key global-map (kbd "C-c a") 'ansi-term-other-window)
 (define-key global-map (kbd "C-c d") 'dired-other-window-current-directory)
@@ -336,6 +352,8 @@ another window if it already exists."
   (diminish 'yas-minor-mode))
 (with-eval-after-load 'projectile
   (diminish 'projectile-mode))
+(with-eval-after-load 'company
+  (diminish 'company-mode))
 
 (install-if-not-installed 'expand-region)
 (define-key global-map (kbd "C-=") 'er/expand-region)
@@ -353,12 +371,10 @@ another window if it already exists."
 (define-key emms-map (kbd "<right>") 'emms-seek-forward)
 (define-key emms-map (kbd "<left>") 'emms-seek-backward)
 (define-key emms-map (kbd "SPC") 'emms-play-dired)
-(setq my-emms-setup-ran nil)
 (defun my-emms-setup ()
   "Set up emms for simple playing of music with mpv, showing the filename and
-time position in the modeline. Only runs if my-emms-setup-ran is nil, and
-sets it to t afterward."
-  (unless my-emms-setup-ran
+time position in the modeline. Do nothing if emms is already loaded."
+  (unless (featurep 'emms-playing-time)
     (require 'emms-source-file)
     (require 'emms-source-playlist)
     (require 'emms-player-simple)
@@ -368,8 +384,7 @@ sets it to t afterward."
     (emms-mode-line 1)
     (emms-mode-line-blank)
     (emms-playing-time 1)
-    (setq emms-player-list '(emms-player-mpv))
-    (setq my-emms-setup-ran t)))
+    (setq emms-player-list '(emms-player-mpv))))
 ;; Since these are all the emms functions I use, just setup emms when I try
 ;; to call one of them
 (dolist (func '(emms-pause
@@ -433,27 +448,25 @@ sets it to t afterward."
   (define-key lsp-ui-mode-map (kbd "M-.") 'lsp-ui-peek-find-definitions)
   (define-key lsp-ui-mode-map (kbd "M-?") 'lsp-ui-peek-find-references))
 
-(install-if-not-installed 'company)
+;; (install-if-not-installed 'company)
 
-;; Need yasnippet for html completion
-(install-if-not-installed 'yasnippet)
-(add-hook 'lsp-mode-hook #'yas-global-mode)
+;; ;; Need yasnippet for html completion
+;; (install-if-not-installed 'yasnippet)
+;; (add-hook 'lsp-mode-hook #'yas-global-mode)
 
 (install-if-not-installed 'projectile)
 ;; Load and set up projectile only after either lsp-mode is enabled (enter
 ;; a project) or an attempt at using a projectile keybind is made
 (setq my-projectile-prefix (kbd "C-c p"))
-(setq my-projectile-setup-ran nil)
 (defun setup-projectile-with-prefix (prefix)
   "Unbind any previous global PREFIX binding, and load and enable projectile
 mode with PREFIX bound to projectile-command-map within projectile-mode-map.
-Only runs if my-projectile-setup-ran is nil, and sets it to t afterward."
-  (unless my-projectile-setup-ran
+Do nothing if projectile is already loaded."
+  (unless (featurep 'projectile)
     (interactive)
     (projectile-mode t)
     (define-key global-map my-projectile-prefix nil)
-    (define-key projectile-mode-map my-projectile-prefix 'projectile-command-map)
-    (setq my-projectile-setup-ran t)))
+    (define-key projectile-mode-map my-projectile-prefix 'projectile-command-map)))
 (define-key global-map my-projectile-prefix
   (lambda () (interactive)
     (setup-projectile-with-prefix my-projectile-prefix)
