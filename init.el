@@ -1,13 +1,4 @@
-;; Some combinations of GNU TLS and Emacs fail to retrieve
-;; archive contents over https
-;; https://debbugs.gnu.org/cgi/bugreport.cgi?bug=34341
-(if (and (version< emacs-version "26.3") (>= libgnutls-version 30604))
-    (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3"))
-
-;; Ensure early-init.el is loaded in older emacs versions
-(when (version< emacs-version "27")
-  (load (concat user-emacs-directory "early-init.el")))
-
+;;; First configure immediate necessities
 ;; Increase garbage collection and temporarily unset file-name-handler-alist
 ;; during startup, for faster launch
 (setq startup-file-name-handler-alist file-name-handler-alist)
@@ -23,12 +14,23 @@
         file-name-handler-alist startup-file-name-handler-alist))
 (add-hook 'emacs-startup-hook #'startup-reset)
 
+;; Emacs versions before 27 do not load early-init.el or
+;; automatically package-initialize
+(when (version< emacs-version "27")
+  (load (concat user-emacs-directory "early-init.el"))
+  (package-initialize))
+
+;; Some combinations of GNU TLS and Emacs fail to retrieve
+;; archive contents over https
+;; https://debbugs.gnu.org/cgi/bugreport.cgi?bug=34341
+(if (and (version< emacs-version "26.3") (>= libgnutls-version 30604))
+    (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3"))
+
 ;;; Set up package installation necessities
 ;; First set up package.el with MELPA
 (require 'package)
 (add-to-list 'package-archives
              '("melpa" . "https://melpa.org/packages/"))
-(package-initialize)
 
 ;; If auto-package-update is not installed, consider this a fresh install and
 ;; refresh package contents before continuing
@@ -117,9 +119,9 @@ if mozc is already loaded."
 
 ;; Keep custom-set-variables/custom-set-faces in a separate file,
 ;; creating it if necessary
-(unless (file-exists-p "~/.emacs.d/custom.el")
-  (with-temp-buffer (write-file "~/.emacs.d/custom.el")))
-(setq custom-file "~/.emacs.d/custom.el")
+(setq custom-file (concat user-emacs-directory "custom.el"))
+(unless (file-exists-p custom-file)
+  (with-temp-buffer (write-file custom-file)))
 (load custom-file)
 
 ;; Don't blink cursor
