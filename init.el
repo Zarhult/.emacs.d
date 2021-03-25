@@ -1,8 +1,8 @@
 ;;; First configure immediate necessities
 ;; Increase garbage collection and temporarily unset file-name-handler-alist
 ;; during startup, for faster launch
-(setq startup-file-name-handler-alist file-name-handler-alist)
-(setq startup-gc-cons-percentage gc-cons-percentage)
+(setq startup-file-name-handler-alist file-name-handler-alist
+      startup-gc-cons-percentage gc-cons-percentage)
 
 (setq gc-cons-threshold most-positive-fixnum
       gc-cons-percentage 0.6
@@ -64,22 +64,21 @@
                  gruvbox-theme))
   (install-if-not-installed theme))
 
-(setq my-dark-theme 'ewal-spacemacs-classic) ; Default dark theme
-(setq my-light-theme 'leuven) ; Default light theme
-
-;; Function and keybind to toggle between dark and light theme
+(defvar dark-theme 'ewal-spacemacs-classic "Current dark theme.")
+(defvar light-theme 'leuven "Curent light theme.")
 (defun toggle-theme ()
+  "Toggle between `dark-theme' and `light-theme'."
   (interactive)
-  (if (eq (car custom-enabled-themes) my-dark-theme)
+  (if (eq (car custom-enabled-themes) dark-theme)
       (progn
         (disable-all-themes)
-        (load-theme my-light-theme t))
+        (load-theme light-theme t))
     (disable-all-themes)
-    (load-theme my-dark-theme t)))
+    (load-theme dark-theme t)))
 (define-key global-map (kbd "C-c k") 'toggle-theme)
 
 ;; Load dark theme by default
-(load-theme my-dark-theme t)
+(load-theme dark-theme t)
 
 ;;; Basic configuration
 ;; Enable C-x C-l, C-x C-u
@@ -152,6 +151,8 @@ if mozc is already loaded."
 
 ;; Don't auto-fit images
 (setq-default image-auto-resize 1.2)
+;; Hide mode-line when viewing images
+(add-hook 'image-mode-hook (lambda () (setq mode-line-format nil)))
 ;; Keybinds for ease of horizontal scrolling of images
 (with-eval-after-load 'image-mode
   (define-key image-mode-map (kbd "<tab>") 'image-scroll-left)
@@ -181,7 +182,7 @@ if mozc is already loaded."
 
 ;; Better asm-mode indentation
 (defun my-asm-mode-hook ()
-  "Hook to override default asm-mode indentation function."
+  "Hook to override default `asm-mode' indentation function."
   (defun asm-calculate-indentation ()
     (or
      ;; Flush labels to the left margin.
@@ -216,8 +217,8 @@ if mozc is already loaded."
   (switch-to-buffer nil))
 
 (defun tenth-next-line ()
-  "Move cursor vertically down 10 lines by setting current-prefix-arg
-before calling next-line."
+  "Move cursor vertically down 10 lines by setting variable `current-prefix-arg'
+before calling `next-line'."
   (interactive)
   (if current-prefix-arg
       (progn
@@ -227,8 +228,8 @@ before calling next-line."
     (setq current-prefix-arg 10))
   (call-interactively 'next-line))
 (defun tenth-previous-line ()
-  "Move cursor vertically up 10 lines by setting current-prefix-arg
-before calling previous-line."
+  "Move cursor vertically up 10 lines by setting variable `current-prefix-arg'
+before calling `previous-line'."
   (interactive)
   (if current-prefix-arg
       (progn
@@ -305,9 +306,22 @@ another window if it already exists."
     (switch-to-buffer-other-window "音楽")))
 
 (defun image-dired-current-directory ()
-  "Launch image-dired on the current directory."
+  "Launch `image-dired' on the current directory."
   (interactive)
   (image-dired "."))
+
+(defvar mode-line-format-visible mode-line-format
+  "Value of variable `mode-line-format' prior to most recent hiding of the
+mode-line by `toggle-mode-line'.")
+(defun toggle-mode-line ()
+  "Toggle visibility of the mode-line."
+  (interactive)
+  (if mode-line-format
+      (setq mode-line-format-visible mode-line-format
+            mode-line-format nil)
+    (setq mode-line-format mode-line-format-visible)
+    (previous-buffer) ; Hacky way of forcing mode-line to update
+    (next-buffer)))
 
 ;;; Keybinds - for my functions
 (define-key global-map (kbd "C-x 2") 'split-and-follow-horizontally)
@@ -320,6 +334,7 @@ another window if it already exists."
 (define-key global-map (kbd "C-c d") 'dired-other-window-current-directory)
 (define-key global-map (kbd "C-c m") 'dired-music-other-window)
 (define-key global-map (kbd "C-c i") 'image-dired-current-directory)
+(define-key global-map (kbd "C-c ;") 'toggle-mode-line)
 (setq image-dired-show-all-from-dir-max-files 999)
 
 (with-eval-after-load 'dired
@@ -362,6 +377,7 @@ another window if it already exists."
 (define-key global-map (kbd "C-M-,") 'writeroom-mode)
 (setq writeroom-bottom-divider-width 0)
 (setq writeroom-width 100)
+(setq writeroom-restore-window-config t)
 
 (install-if-not-installed 'diminish)
 ;; First diminish built-in visual-line-mode without an eval-after-load
@@ -441,8 +457,8 @@ time position in the modeline. Do nothing if emms is already loaded."
 ;; js: "npm install -g typescript-language-server; npm install -g typescript"
 ;; python: "pip install 'python-language-server[all]'"
 (setq my-lsp-mode-hooks '(c-mode-hook c++-mode-hook objc-mode-hook
-                                     html-mode-hook css-mode-hook js-mode-hook
-                                     python-mode-hook))
+                                      html-mode-hook css-mode-hook js-mode-hook
+                                      python-mode-hook))
 (dolist (hook my-lsp-mode-hooks)
   (add-hook hook #'lsp-deferred))
 (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration)
@@ -484,7 +500,7 @@ time position in the modeline. Do nothing if emms is already loaded."
 (setq my-projectile-prefix (kbd "C-c p"))
 (defun setup-projectile-with-prefix (prefix)
   "Unbind any previous global PREFIX binding, and load and enable projectile
-mode with PREFIX bound to projectile-command-map within projectile-mode-map.
+mode with PREFIX bound to `projectile-command-map' within `projectile-mode-map'.
 Do nothing if projectile is already loaded."
   (unless (featurep 'projectile)
     (interactive)
@@ -515,4 +531,3 @@ Do nothing if projectile is already loaded."
 
 (install-if-not-installed 'magit)
 (define-key global-map (kbd "C-c g") 'magit-file-dispatch)
-
