@@ -1,3 +1,13 @@
+;; Some combinations of GNU TLS and Emacs fail to retrieve
+;; archive contents over https
+;; https://debbugs.gnu.org/cgi/bugreport.cgi?bug=34341
+(if (and (version< emacs-version "26.3") (>= libgnutls-version 30604))
+    (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3"))
+
+;; Ensure early-init.el is loaded in older emacs versions
+(when (version< emacs-version "27")
+  (load (concat user-emacs-directory "early-init.el")))
+
 ;; Increase garbage collection and temporarily unset file-name-handler-alist
 ;; during startup, for faster launch
 (setq startup-file-name-handler-alist file-name-handler-alist)
@@ -18,13 +28,12 @@
 (require 'package)
 (add-to-list 'package-archives
              '("melpa" . "https://melpa.org/packages/"))
+(package-initialize)
 
-;; If auto-package-update is not installed, mark this as a fresh install
-;; and refresh package contents before continuing
-(setq fresh-install nil)
+;; If auto-package-update is not installed, consider this a fresh install and
+;; refresh package contents before continuing
 (unless (package-installed-p 'auto-package-update)
-  (package-refresh-contents)
-  (setq fresh-install t))
+  (package-refresh-contents))
 
 (defun install-if-not-installed (package)
   "Check if PACKAGE is installed and install it if not."
@@ -40,17 +49,20 @@
 ;;; Themes
 (defun disable-all-themes ()
   "Disable all active themes."
+  (interactive)
   (dolist (theme custom-enabled-themes)
     (disable-theme theme)))
 
 ;; Install some cool themes
-(dolist (theme '(cherry-blossom-theme
+(install-if-not-installed 'ewal)
+(dolist (theme '(ewal-spacemacs-themes
+                 cherry-blossom-theme
                  soothe-theme
                  clues-theme
                  gruvbox-theme))
   (install-if-not-installed theme))
 
-(setq my-dark-theme 'soothe) ; Default dark theme
+(setq my-dark-theme 'ewal-spacemacs-classic) ; Default dark theme
 (setq my-light-theme 'leuven) ; Default light theme
 
 ;; Function and keybind to toggle between dark and light theme
@@ -136,8 +148,8 @@ if mozc is already loaded."
 ;; Prettify symbols
 (global-prettify-symbols-mode t)
 
-;; Don't auto-scale images
-(setq-default image-auto-resize 1)
+;; Don't auto-fit images
+(setq-default image-auto-resize 1.2)
 ;; Keybinds for ease of horizontal scrolling of images
 (with-eval-after-load 'image-mode
   (define-key image-mode-map (kbd "<tab>") 'image-scroll-left)
@@ -196,27 +208,32 @@ if mozc is already loaded."
   (balance-windows)
   (other-window 1))
 
-(defun fifth-next-line ()
-  "Move cursor vertically down 5 lines by setting current-prefix-arg
+(defun alternate-buffer ()
+  "Switch to the buffer that was active before the current one."
+  (interactive)
+  (switch-to-buffer nil))
+
+(defun tenth-next-line ()
+  "Move cursor vertically down 10 lines by setting current-prefix-arg
 before calling next-line."
   (interactive)
   (if current-prefix-arg
       (progn
         (if (eq current-prefix-arg '-)
-            (setq current-prefix-arg -5)
-          (setq current-prefix-arg (* current-prefix-arg 5))))
-    (setq current-prefix-arg 5))
+            (setq current-prefix-arg -10)
+          (setq current-prefix-arg (* current-prefix-arg 10))))
+    (setq current-prefix-arg 10))
   (call-interactively 'next-line))
-(defun fifth-previous-line ()
+(defun tenth-previous-line ()
   "Move cursor vertically up 10 lines by setting current-prefix-arg
 before calling previous-line."
   (interactive)
   (if current-prefix-arg
       (progn
         (if (eq current-prefix-arg '-)
-            (setq current-prefix-arg -5)
-          (setq current-prefix-arg (* current-prefix-arg 5))))
-    (setq current-prefix-arg 5))
+            (setq current-prefix-arg -10)
+          (setq current-prefix-arg (* current-prefix-arg 10))))
+    (setq current-prefix-arg 10))
   (call-interactively 'previous-line))
 
 (defun reload-current-dired-buffer ()
@@ -293,8 +310,9 @@ another window if it already exists."
 ;;; Keybinds - for my functions
 (define-key global-map (kbd "C-x 2") 'split-and-follow-horizontally)
 (define-key global-map (kbd "C-x 3") 'split-and-follow-vertically)
-(define-key global-map (kbd "C-;")   'fifth-next-line)
-(define-key global-map (kbd "C-M-;") 'fifth-previous-line)
+(define-key global-map (kbd "C-M-'") 'alternate-buffer)
+(define-key global-map (kbd "C-;")   'tenth-next-line)
+(define-key global-map (kbd "C-M-;") 'tenth-previous-line)
 (define-key global-map (kbd "C-c s") 'eshell-other-window)
 (define-key global-map (kbd "C-c a") 'ansi-term-other-window)
 (define-key global-map (kbd "C-c d") 'dired-other-window-current-directory)
@@ -337,6 +355,11 @@ another window if it already exists."
 ;; (load-file "~/.emacs.d/evil-motion-trainer.el")
 ;; (global-evil-motion-trainer-mode 1)
 ;; (setq evil-motion-trainer-threshold 1)
+
+(install-if-not-installed 'writeroom-mode)
+(define-key global-map (kbd "C-M-,") 'writeroom-mode)
+(setq writeroom-bottom-divider-width 0)
+(setq writeroom-width 100)
 
 (install-if-not-installed 'diminish)
 ;; First diminish built-in visual-line-mode without an eval-after-load
@@ -402,9 +425,8 @@ time position in the modeline. Do nothing if emms is already loaded."
 ;; Note that for pdf-tools, if on Gentoo, must install
 ;; app-text/poppler with "cairo" use flag
 (install-if-not-installed 'pdf-tools)
-(add-hook 'pdf-view-mode-hook #'pdf-view-midnight-minor-mode)
-(when fresh-install
-  (pdf-tools-install))
+(add-hook 'pdf-view-mode-hook #'pdf-view-midnight-minor-mode) ; Default dark mode
+(pdf-loader-install)
 
 ;;; Packages - programming
 (install-if-not-installed 'lsp-mode)
