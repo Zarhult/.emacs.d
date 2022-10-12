@@ -59,26 +59,52 @@
 (install-if-not-installed 'ewal)
 (dolist (theme '(ewal-spacemacs-themes
                  cherry-blossom-theme
+                 spacemacs-theme
+                 minsk-theme
+                 base16-theme
                  soothe-theme
                  clues-theme
-                 gruvbox-theme))
+                 challenger-deep-theme
+                 firecode-theme
+                 inkpot-theme
+                 lavender-theme
+                 purple-haze-theme
+                 gandalf-theme))
   (install-if-not-installed theme))
 
-(defvar dark-theme 'ewal-spacemacs-classic "Current dark theme.")
-(defvar light-theme 'leuven "Curent light theme.")
-(defun toggle-theme ()
-  "Toggle between `dark-theme' and `light-theme'."
+;; List of theme names to cycle through
+(setq main-themes
+      (list 'ewal-spacemacs-classic
+            'cherry-blossom
+            'spacemacs-dark
+            'minsk
+            'base16-ashes
+            'base16-gruvbox-dark-hard
+            'soothe
+            'clues
+            'challenger-deep
+            'firecode
+            'inkpot
+            'lavender
+            'purple-haze
+            'spacemacs-light
+            'gandalf))
+
+(setq current-theme-num 0)
+(defun cycle-theme ()
+  "Cycle through theme list `main-themes', and default theme."
   (interactive)
-  (if (eq (car custom-enabled-themes) dark-theme)
+  (progn
+    (if (= (length main-themes) current-theme-num)
+        (progn
+          (disable-all-themes)
+          (setq current-theme-num 0))
       (progn
         (disable-all-themes)
-        (load-theme light-theme t))
-    (disable-all-themes)
-    (load-theme dark-theme t)))
-(define-key global-map (kbd "C-c k") 'toggle-theme)
+        (load-theme (nth current-theme-num main-themes) t)
+        (setq current-theme-num (+ current-theme-num 1))))))
 
-;; Load dark theme by default
-(load-theme dark-theme t)
+(define-key global-map (kbd "C-c k") 'cycle-theme)
 
 ;;; Basic configuration
 ;; Enable C-x C-l, C-x C-u
@@ -327,8 +353,8 @@ mode-line by `toggle-mode-line'.")
 (define-key global-map (kbd "C-x 2") 'split-and-follow-horizontally)
 (define-key global-map (kbd "C-x 3") 'split-and-follow-vertically)
 (define-key global-map (kbd "C-M-'") 'alternate-buffer)
-(define-key global-map (kbd "C-;")   'tenth-next-line)
-(define-key global-map (kbd "C-M-;") 'tenth-previous-line)
+(define-key global-map (kbd "C-'")   'tenth-next-line)
+(define-key global-map (kbd "C-M-'") 'tenth-previous-line)
 (define-key global-map (kbd "C-c s") 'eshell-other-window)
 (define-key global-map (kbd "C-c a") 'ansi-term-other-window)
 (define-key global-map (kbd "C-c d") 'dired-other-window-current-directory)
@@ -378,6 +404,7 @@ mode-line by `toggle-mode-line'.")
 (setq writeroom-bottom-divider-width 0)
 (setq writeroom-width 100)
 (setq writeroom-restore-window-config t)
+(setq writeroom-fullscreen-effect "maximized")
 
 (install-if-not-installed 'diminish)
 ;; First diminish built-in visual-line-mode without an eval-after-load
@@ -462,6 +489,15 @@ time position in the modeline. Do nothing if emms is already loaded."
 (dolist (hook my-lsp-mode-hooks)
   (add-hook hook #'lsp-deferred))
 (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration)
+
+;; Set up lsp-pyright deferred loading
+(install-if-not-installed 'lsp-pyright)
+(defun require-pyright ()
+  "Load lsp-pyright."
+  (unless (featurep 'lsp-pyright)
+    (require 'lsp-pyright)))
+(add-hook 'python-mode-hook 'require-pyright)
+
 ;; Disable some functionality
 (setq lsp-enable-on-type-formatting nil)
 (setq lsp-headerline-breadcrumb-enable nil) ; Hide headerline
@@ -488,11 +524,11 @@ time position in the modeline. Do nothing if emms is already loaded."
   (define-key lsp-ui-mode-map (kbd "M-.") 'lsp-ui-peek-find-definitions)
   (define-key lsp-ui-mode-map (kbd "M-?") 'lsp-ui-peek-find-references))
 
-;; (install-if-not-installed 'company)
+(install-if-not-installed 'company)
 
-;; ;; Need yasnippet for html completion
-;; (install-if-not-installed 'yasnippet)
-;; (add-hook 'lsp-mode-hook #'yas-global-mode)
+;; Need yasnippet for html completion
+ (install-if-not-installed 'yasnippet)
+ (add-hook 'lsp-mode-hook #'yas-global-mode)
 
 (install-if-not-installed 'projectile)
 ;; Load and set up projectile only after either lsp-mode is enabled (enter
