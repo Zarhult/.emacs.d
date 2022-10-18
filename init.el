@@ -54,47 +54,45 @@
   (interactive)
   (dolist (theme custom-enabled-themes)
     (disable-theme theme)))
+(defun load-theme-from-scratch ()
+  "Disable all themes and then call load-theme interactively."
+  (interactive)
+  (disable-all-themes)
+  (call-interactively 'load-theme))
 
 ;; Install some cool themes
 (install-if-not-installed 'ewal)
-(dolist (theme '(ewal-spacemacs-themes
-                 cherry-blossom-theme
+(dolist (theme '(base16-theme
                  spacemacs-theme
+                 doom-themes
+                 cherry-blossom-theme
                  minsk-theme
-                 base16-theme
-                 soothe-theme
-                 clues-theme
-                 challenger-deep-theme
                  firecode-theme
-                 inkpot-theme
-                 lavender-theme
-                 purple-haze-theme
-                 gandalf-theme))
+                 ewal-spacemacs-themes))
   (install-if-not-installed theme))
 
-;; List of theme names to cycle through
+(setq doom-themes-enable-bold t)
+(setq doom-themes-enable-italic t)
+
+;; List of good themes to cycle through, with first theme being default theme
 (setq main-themes
-      (list 'ewal-spacemacs-classic
-            'cherry-blossom
-            'spacemacs-dark
-            'minsk
+      (list 'manoj-dark
+            'base16-darkviolet
             'base16-ashes
             'base16-gruvbox-dark-hard
-            'soothe
-            'clues
-            'challenger-deep
-            'firecode
-            'inkpot
-            'lavender
-            'purple-haze
-            'spacemacs-light
-            'gandalf))
-
+            'base16-horizon-terminal-dark
+            'spacemacs-dark
+            'doom-badger
+            'doom-city-lights
+            'doom-dark+
+            'doom-ir-black
+            'cherry-blossom
+            'minsk
+            'firecode))
 (setq current-theme-num 0)
 (defun cycle-theme ()
   "Cycle through theme list `main-themes', and default theme."
   (interactive)
-  (progn
     (if (= (length main-themes) current-theme-num)
         (progn
           (disable-all-themes)
@@ -102,11 +100,14 @@
       (progn
         (disable-all-themes)
         (load-theme (nth current-theme-num main-themes) t)
-        (setq current-theme-num (+ current-theme-num 1))))))
+        (setq current-theme-num (+ current-theme-num 1)))))
 
-(define-key global-map (kbd "C-c k") 'cycle-theme)
+;; Set first theme
+(cycle-theme)
 
 ;;; Basic configuration
+(set-language-environment "Japanese")
+
 ;; Enable C-x C-l, C-x C-u
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
@@ -125,19 +126,6 @@
     (dolist (charset '(kana han symbol cjk-misc bopomofo))
       (set-fontset-font (frame-parameter nil 'font) charset
                         (font-spec :family "IPAGothic"))))
-
-;; Japanese input with mozc
-(define-key global-map (kbd "C-`") 'toggle-input-method)
-(defun my-mozc-setup ()
-  "Set up mozc for Japanese input using echo-area candidate windows. Do nothing
-if mozc is already loaded."
-  (interactive)
-  (unless (featurep 'mozc)
-    (require 'mozc)
-    (set-language-environment "Japanese")
-    (setq default-input-method "japanese-mozc")
-    (setq mozc-candidate-style 'echo-area)))
-(advice-add 'toggle-input-method :before #'my-mozc-setup)
 
 ;; Enable visual line mode, mainly to hide arrow icons
 (global-visual-line-mode t)
@@ -202,9 +190,13 @@ if mozc is already loaded."
 (add-to-list 'auto-mode-alist '("/[^\\./]*\\'" . text-mode))
 
 ;; Relative line numbers, when text editing only
+(setq display-line-numbers-type 'relative)
 ;; (add-hook 'prog-mode-hook 'display-line-numbers-mode)
 ;; (add-hook 'text-mode-hook 'display-line-numbers-mode)
-;; (setq display-line-numbers-type 'relative)
+
+;; Scroll line by line
+(setq scroll-step 1)
+(setq scroll-conservatively 10000)
 
 ;; Better asm-mode indentation
 (defun my-asm-mode-hook ()
@@ -222,6 +214,9 @@ if mozc is already loaded."
      ;; The rest goes at column 4
      (or 4))))
 (add-hook 'asm-mode-hook #'my-asm-mode-hook)
+
+;; No warnings when showing lots of images with image-dired-show-all-from-dir
+(setq image-dired-show-all-from-dir-max-files 999)
 
 ;;; My main functions
 (defun split-and-follow-horizontally ()
@@ -241,29 +236,6 @@ if mozc is already loaded."
   "Switch to the buffer that was active before the current one."
   (interactive)
   (switch-to-buffer nil))
-
-(defun tenth-next-line ()
-  "Move cursor vertically down 10 lines by setting variable `current-prefix-arg'
-before calling `next-line'."
-  (interactive)
-  (if current-prefix-arg
-      (progn
-        (if (eq current-prefix-arg '-)
-            (setq current-prefix-arg -10)
-          (setq current-prefix-arg (* current-prefix-arg 10))))
-    (setq current-prefix-arg 10))
-  (call-interactively 'next-line))
-(defun tenth-previous-line ()
-  "Move cursor vertically up 10 lines by setting variable `current-prefix-arg'
-before calling `previous-line'."
-  (interactive)
-  (if current-prefix-arg
-      (progn
-        (if (eq current-prefix-arg '-)
-            (setq current-prefix-arg -10)
-          (setq current-prefix-arg (* current-prefix-arg 10))))
-    (setq current-prefix-arg 10))
-  (call-interactively 'previous-line))
 
 (defun reload-current-dired-buffer ()
   "Reload current `dired-mode' buffer"
@@ -353,16 +325,14 @@ mode-line by `toggle-mode-line'.")
 (define-key global-map (kbd "C-x 2") 'split-and-follow-horizontally)
 (define-key global-map (kbd "C-x 3") 'split-and-follow-vertically)
 (define-key global-map (kbd "C-M-'") 'alternate-buffer)
-(define-key global-map (kbd "C-'")   'tenth-next-line)
-(define-key global-map (kbd "C-M-'") 'tenth-previous-line)
 (define-key global-map (kbd "C-c s") 'eshell-other-window)
 (define-key global-map (kbd "C-c a") 'ansi-term-other-window)
 (define-key global-map (kbd "C-c d") 'dired-other-window-current-directory)
 (define-key global-map (kbd "C-c m") 'dired-music-other-window)
 (define-key global-map (kbd "C-c i") 'image-dired-current-directory)
 (define-key global-map (kbd "C-c ;") 'toggle-mode-line)
-(setq image-dired-show-all-from-dir-max-files 999)
-
+(define-key global-map (kbd "C-c '") 'load-theme-from-scratch)
+(define-key global-map (kbd "C-c k") 'cycle-theme)
 (with-eval-after-load 'dired
   (define-key dired-mode-map (kbd "C-c o") 'dired-xdg-open)
   (define-key dired-mode-map (kbd "C-.") 'toggle-dired-listing-switches))
@@ -370,34 +340,41 @@ mode-line by `toggle-mode-line'.")
 ;;; Keybinds - for unbound built-in functions
 ;; Make C-x k kill current buffer without prompt
 (define-key global-map (kbd "C-x k") 'kill-this-buffer)
+
 ;; Autoload org-timer functions before binding them
 (dolist (func '(org-timer-set-timer
                 org-timer-pause-or-continue
                 org-timer-stop))
   (autoload func "org-timer"))
 (define-prefix-command 'org-timer-map)
-(define-key global-map (kbd "C-c j") 'org-timer-map)
+(define-key global-map (kbd "C-c h") 'org-timer-map)
 (define-key org-timer-map (kbd "s") 'org-timer-set-timer)
 (define-key org-timer-map (kbd "p") 'org-timer-pause-or-continue)
 (define-key org-timer-map (kbd "k") 'org-timer-stop)
 
 ;;; Packages - general
-;; (install-if-not-installed 'evil)
-;; (require 'evil)
-;; (setq evil-insert-state-cursor t
-;;       evil-motion-state-cursor t
-;;       evil-operator-state-cursor t
-;;       evil-visual-state-cursor t
-;;       evil-replace-state-cursor t)
-;; ;; Use evil for text editing only
+(install-if-not-installed 'evil)
+(with-eval-after-load 'evil
+  (setq evil-insert-state-cursor t
+        evil-motion-state-cursor t
+        evil-operator-state-cursor t
+        evil-visual-state-cursor t
+        evil-replace-state-cursor t))
+;; Use evil for text editing
 ;; (setq evil-default-state 'emacs)
 ;; (evil-set-initial-state 'prog-mode 'normal)
 ;; (evil-set-initial-state 'text-mode 'normal)
-;; (evil-mode t)
-
-;; (load-file "~/.emacs.d/evil-motion-trainer.el")
-;; (global-evil-motion-trainer-mode 1)
-;; (setq evil-motion-trainer-threshold 1)
+(defun toggle-evil ()
+  "Toggle between editing with evil and line numbers and without."
+  (interactive)
+  (if (bound-and-true-p evil-mode)
+      (progn
+        (display-line-numbers-mode -1)
+        (evil-mode -1))
+    (progn
+      (display-line-numbers-mode t)
+      (evil-mode t))))
+(define-key global-map (kbd "C-c j") 'toggle-evil)
 
 (install-if-not-installed 'writeroom-mode)
 (define-key global-map (kbd "C-M-,") 'writeroom-mode)
@@ -428,6 +405,11 @@ mode-line by `toggle-mode-line'.")
 
 (install-if-not-installed 'which-key)
 (which-key-mode t)
+
+(install-if-not-installed 'avy)
+(setq avy-all-windows nil) ; Only consider candidates in the current window
+(global-set-key (kbd "C-;") 'avy-goto-char)
+(global-set-key (kbd "C-M-;") 'avy-goto-line)
 
 (install-if-not-installed 'emms)
 (define-prefix-command 'emms-map)
