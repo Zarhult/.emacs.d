@@ -62,6 +62,7 @@
 
 ;; Install some cool themes
 (install-if-not-installed 'ewal)
+(setq ewal-shade-percent-difference 15) ; This makes avy's colors readable with ewal theme
 (dolist (theme '(base16-theme
                  spacemacs-theme
                  doom-themes
@@ -76,11 +77,12 @@
 
 ;; List of good themes to cycle through, with first theme being default theme
 (setq main-themes
-      (list 'manoj-dark
-            'base16-darkviolet
+      (list 'ewal-spacemacs-classic
             'base16-ashes
+            'base16-darkviolet
             'base16-gruvbox-dark-hard
             'base16-horizon-terminal-dark
+            'my-manoj-dark
             'spacemacs-dark
             'doom-badger
             'doom-city-lights
@@ -115,6 +117,9 @@
 ;; Highlight matching parens
 (show-paren-mode t)
 
+;; Automatically create matching parens
+(electric-pair-mode 1)
+
 ;; Show column in modeline
 (column-number-mode t)
 
@@ -137,8 +142,8 @@
   (with-temp-buffer (write-file custom-file)))
 (load custom-file)
 
-;; Don't blink cursor
-(blink-cursor-mode -1)
+;; Never stop blinking cursor (easier to locate cursor)
+(setq blink-cursor-blinks 0)
 
 ;; Show time in modeline, without load average
 ;; Note that must enable the mode only after the configuration
@@ -353,35 +358,112 @@ mode-line by `toggle-mode-line'.")
 (define-key org-timer-map (kbd "k") 'org-timer-stop)
 
 ;;; Packages - general
-(install-if-not-installed 'evil)
-(with-eval-after-load 'evil
-  (setq evil-insert-state-cursor t
-        evil-motion-state-cursor t
-        evil-operator-state-cursor t
-        evil-visual-state-cursor t
-        evil-replace-state-cursor t))
-;; Use evil for text editing
-;; (setq evil-default-state 'emacs)
-;; (evil-set-initial-state 'prog-mode 'normal)
-;; (evil-set-initial-state 'text-mode 'normal)
-(defun toggle-evil ()
-  "Toggle between editing with evil and line numbers and without."
+;; (install-if-not-installed 'evil)
+;; (with-eval-after-load 'evil
+;;   (setq evil-insert-state-cursor t
+;;         evil-motion-state-cursor t
+;;         evil-operator-state-cursor t
+;;         evil-visual-state-cursor t
+;;         evil-replace-state-cursor t))
+;; (defun toggle-evil ()
+;;   "Toggle between editing with evil and line numbers and without."
+;;   (interactive)
+;;   (if (bound-and-true-p evil-mode)
+;;       (progn
+;;         (display-line-numbers-mode -1)
+;;         (evil-mode -1))
+;;     (progn
+;;       (display-line-numbers-mode t)
+;;       (evil-mode t))))
+;; (define-key global-map (kbd "C-c j") 'toggle-evil)
+
+;; Experiment with hydra for text editing prefixed with key-chord "jk" for minimal ctrl use.
+;; The idea is to make emacs act like ctrl presses itself for all common uses of ctrl in text
+;; editing, so it is possible to edit with vanilla-style bindings with ctrl being rarely needed.
+;; Commands like M-v will still work the same, but C-u SPC for instance becomes u SPC. The only
+;; time ctrl is necessary is in C-M- commands, to distinguish them from M- commands. Inserting
+;; text is done outside of the hydra.
+(defun my-jump-to-mark ()
+  "Jump to the local mark, respecting the `mark-ring' order.
+This is the same as using \\[set-mark-command] with the prefix argument,
+or using the C-u SPC keybind."
   (interactive)
-  (if (bound-and-true-p evil-mode)
-      (progn
-        (display-line-numbers-mode -1)
-        (evil-mode -1))
-    (progn
-      (display-line-numbers-mode t)
-      (evil-mode t))))
-(define-key global-map (kbd "C-c j") 'toggle-evil)
+  (set-mark-command '(4)))
+(install-if-not-installed 'hydra)
+(setq hydra-is-helpful nil) ; Indicate hydra status with hollow cursor instead, as below
+(install-if-not-installed 'key-chord) ; So we can enter the hydra without needing ctrl
+(setq key-chord-two-keys-delay 0.05)
+(key-chord-mode t)
+(key-chord-define-global
+ "jk"
+ (defhydra hydra-edit (:pre (setq cursor-type 'hollow)
+                            :post (progn
+                                    (setq cursor-type t)))
+   "edit"
+   ("n" next-line)
+   ("p" previous-line)
+   ("f" forward-char)
+   ("b" backward-char)
+   ("a" beginning-of-line)
+   ("e" move-end-of-line)
+   ("v" scroll-up-command)
+   ("=" er/expand-region)
+   ("s" (lambda () ; isearch-forward without leaving hydra
+          (interactive)
+          (isearch-forward-regexp)
+          (hydra-edit/body))  "search" :color blue)
+   ("r" (lambda () ; isearch-backward without leaving hydra
+          (interactive)
+          (isearch-backward-regexp)
+          (hydra-edit/body))  "reverse" :color blue) ;
+   ("u SPC" my-jump-to-mark)
+   ("M-v" scroll-down-command)
+   ("M-b" backward-word)
+   ("M-f" forward-word)
+   ("M-d" kill-word)
+   ("M-;" comment-dwim)
+   ("M-SPC" just-one-space)
+   ("M-^" delete-indentation)
+   ("M-m" back-to-indentation)
+   ("M-j" default-indent-new-line)
+   ("g" keyboard-quit)
+   ("k" kill-visual-line)
+   ("d" delete-char)
+   ("w" kill-region)
+   ("y" yank)
+   ("m" newline)
+   ("TAB" indent-for-tab-command)
+   ("/" undo)
+   (";" avy-goto-char)
+   ("'" avy-goto-line)
+   ("l" recenter-top-bottom)
+   ("M-w" clipboard-kill-ring-save)
+   ("M-<" beginning-of-buffer)
+   ("M->" end-of-buffer)
+   ("M-r" move-to-window-line-top-bottom)
+   ("SPC" set-mark-command)
+   ("x0" delete-window)
+   ("x1" delete-other-windows)
+   ("x2" split-and-follow-vertically)
+   ("x3" split-and-follow-horizontally)
+   ("o" other-window)
+   ("O" (lambda () ;; same as C-- C-x o
+          (interactive)
+          (other-window -1)))
+   ("xs" save-buffer)
+   ("xf" find-file)
+   ("xk" kill-this-buffer)
+   ("C-M-," writeroom-mode)
+   ("q" nil)))
 
 (install-if-not-installed 'writeroom-mode)
 (define-key global-map (kbd "C-M-,") 'writeroom-mode)
-(setq writeroom-bottom-divider-width 0)
-(setq writeroom-width 100)
+(setq writeroom-bottom-divider-width 0) ; Don't adjust buffer width/center text
+(setq writeroom-width 1)
 (setq writeroom-restore-window-config t)
 (setq writeroom-fullscreen-effect "maximized")
+(with-eval-after-load 'writeroom-mode
+  (delete 'writeroom-set-alpha writeroom-global-functions)) ; Don't modify transparency
 
 (install-if-not-installed 'diminish)
 ;; First diminish built-in visual-line-mode without an eval-after-load
@@ -399,6 +481,8 @@ mode-line by `toggle-mode-line'.")
   (diminish 'projectile-mode))
 (with-eval-after-load 'company
   (diminish 'company-mode))
+(with-eval-after-load 'git-gutter
+ (diminish 'git-gutter-mode))
 
 (install-if-not-installed 'expand-region)
 (define-key global-map (kbd "C-=") 'er/expand-region)
@@ -408,8 +492,11 @@ mode-line by `toggle-mode-line'.")
 
 (install-if-not-installed 'avy)
 (setq avy-all-windows nil) ; Only consider candidates in the current window
-(global-set-key (kbd "C-;") 'avy-goto-char)
-(global-set-key (kbd "C-M-;") 'avy-goto-line)
+(define-key global-map (kbd "C-;") 'avy-goto-char)
+(define-key global-map (kbd "C-'") 'avy-goto-line)
+(with-eval-after-load 'avy
+  (set-face-attribute 'avy-lead-face nil :weight 'bold)
+  (set-face-attribute 'avy-lead-face-0 nil :weight 'bold))
 
 (install-if-not-installed 'emms)
 (define-prefix-command 'emms-map)
@@ -481,8 +568,9 @@ time position in the modeline. Do nothing if emms is already loaded."
 (add-hook 'python-mode-hook 'require-pyright)
 
 ;; Disable some functionality
-(setq lsp-enable-on-type-formatting nil)
-(setq lsp-headerline-breadcrumb-enable nil) ; Hide headerline
+;; (setq lsp-enable-on-type-formatting nil)
+;; (setq lsp-headerline-breadcrumb-enable nil) ; Hide headerline
+
 ;; Enable stricter linting for css
 (setq lsp-css-lint-duplicate-properties t
       lsp-css-lint-zero-units t
@@ -498,6 +586,8 @@ time position in the modeline. Do nothing if emms is already loaded."
 (with-eval-after-load 'flymake
   (define-key flymake-mode-map (kbd "M-n") 'flymake-goto-next-error)
   (define-key flymake-mode-map (kbd "M-p") 'flymake-goto-prev-error))
+;; Put flymake on right fringe so we can use git-gutter on the left fringe
+(setq flymake-fringe-indicator-position 'right-fringe)
 
 (install-if-not-installed 'lsp-ui)
 (with-eval-after-load 'lsp-ui
@@ -507,6 +597,8 @@ time position in the modeline. Do nothing if emms is already loaded."
   (define-key lsp-ui-mode-map (kbd "M-?") 'lsp-ui-peek-find-references))
 
 (install-if-not-installed 'company)
+(setq company-idle-delay nil) ;; Complete only on demand with keybind
+(define-key global-map (kbd "M-i") 'company-complete)
 
 ;; Need yasnippet for html completion
  (install-if-not-installed 'yasnippet)
@@ -549,3 +641,13 @@ Do nothing if projectile is already loaded."
 
 (install-if-not-installed 'magit)
 (define-key global-map (kbd "C-c g") 'magit-file-dispatch)
+
+(install-if-not-installed 'git-gutter-fringe)
+;; git-gutter-fringe deferred loading
+(defun load-git-gutter-fringe ()
+  "Load git-gutter-fringe."
+  (unless (featurep 'git-gutter-fringe)
+    (require 'git-gutter-fringe)
+    (global-git-gutter-mode t)))
+(add-hook 'prog-mode-hook 'load-git-gutter-fringe) ; todo: why does this cause load at startup?
+(add-hook 'text-mode-hook 'load-git-gutter-fringe)
