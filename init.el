@@ -62,35 +62,25 @@
 
 ;; Install some cool themes
 (install-if-not-installed 'ewal)
-(setq ewal-shade-percent-difference 15) ; This makes avy's colors readable with ewal theme
-(dolist (theme '(base16-theme
-                 spacemacs-theme
+(dolist (theme '(ewal-spacemacs-themes
+                 base16-theme
                  doom-themes
                  cherry-blossom-theme
-                 minsk-theme
-                 firecode-theme
-                 ewal-spacemacs-themes))
+                 minsk-theme))
   (install-if-not-installed theme))
-
 (setq doom-themes-enable-bold t)
 (setq doom-themes-enable-italic t)
+(setq ewal-shade-percent-difference 15) ; This makes avy's colors readable with ewal theme
 
 ;; List of good themes to cycle through, with first theme being default theme
 (setq main-themes
       (list 'ewal-spacemacs-classic
             'base16-ashes
             'base16-darkviolet
-            'base16-gruvbox-dark-hard
-            'base16-horizon-terminal-dark
             'my-manoj-dark
-            'spacemacs-dark
-            'doom-badger
-            'doom-city-lights
-            'doom-dark+
             'doom-ir-black
             'cherry-blossom
-            'minsk
-            'firecode))
+            'minsk))
 (setq current-theme-num 0)
 (defun cycle-theme ()
   "Cycle through theme list `main-themes', and default theme."
@@ -106,6 +96,11 @@
 
 ;; Set first theme
 (cycle-theme)
+
+;; Also rand-theme option
+(install-if-not-installed 'rand-theme)
+(setq rand-theme-unwanted '(adwaita dichromacy tango leuven light-blue tsdh-light modus-operandi whiteboard))
+(define-key global-map (kbd "C-c r") 'rand-theme)
 
 ;;; Basic configuration
 (set-language-environment "Japanese")
@@ -124,7 +119,7 @@
 (column-number-mode t)
 
 ;; Font size
-(set-face-attribute 'default nil :height 120)
+(set-face-attribute 'default nil :height 105)
 
 ;; Set Japanese font (if not in terminal emacs)
 (if (display-graphic-p)
@@ -142,7 +137,8 @@
   (with-temp-buffer (write-file custom-file)))
 (load custom-file)
 
-;; Never stop blinking cursor (easier to locate cursor)
+;; Don't blink cursor, but if something starts blinking the cursor then blink indefinitely
+(blink-cursor-mode -1)
 (setq blink-cursor-blinks 0)
 
 ;; Show time in modeline, without load average
@@ -194,10 +190,8 @@
 (add-to-list 'auto-mode-alist '("\\.conf\\'" . text-mode))
 (add-to-list 'auto-mode-alist '("/[^\\./]*\\'" . text-mode))
 
-;; Relative line numbers, when text editing only
+;; Use relative line numbers when line numbers are enabled
 (setq display-line-numbers-type 'relative)
-;; (add-hook 'prog-mode-hook 'display-line-numbers-mode)
-;; (add-hook 'text-mode-hook 'display-line-numbers-mode)
 
 ;; Scroll line by line
 (setq scroll-step 1)
@@ -358,48 +352,27 @@ mode-line by `toggle-mode-line'.")
 (define-key org-timer-map (kbd "k") 'org-timer-stop)
 
 ;;; Packages - general
-;; (install-if-not-installed 'evil)
-;; (with-eval-after-load 'evil
-;;   (setq evil-insert-state-cursor t
-;;         evil-motion-state-cursor t
-;;         evil-operator-state-cursor t
-;;         evil-visual-state-cursor t
-;;         evil-replace-state-cursor t))
-;; (defun toggle-evil ()
-;;   "Toggle between editing with evil and line numbers and without."
-;;   (interactive)
-;;   (if (bound-and-true-p evil-mode)
-;;       (progn
-;;         (display-line-numbers-mode -1)
-;;         (evil-mode -1))
-;;     (progn
-;;       (display-line-numbers-mode t)
-;;       (evil-mode t))))
-;; (define-key global-map (kbd "C-c j") 'toggle-evil)
+(install-if-not-installed 'hydra)
+(setq hydra-is-helpful nil)
 
-;; Experiment with hydra for text editing prefixed with key-chord "jk" for minimal ctrl use.
-;; The idea is to make emacs act like ctrl presses itself for all common uses of ctrl in text
-;; editing, so it is possible to edit with vanilla-style bindings with ctrl being rarely needed.
-;; Commands like M-v will still work the same, but C-u SPC for instance becomes u SPC. The only
-;; time ctrl is necessary is in C-M- commands, to distinguish them from M- commands. Inserting
-;; text is done outside of the hydra.
-(defun my-jump-to-mark ()
+(install-if-not-installed 'key-chord)
+(setq key-chord-two-keys-delay 0.075)
+(key-chord-mode t)
+
+(defun my-jump-to-mark () ; Function that is equivalent to entering C-u SPC
   "Jump to the local mark, respecting the `mark-ring' order.
 This is the same as using \\[set-mark-command] with the prefix argument,
 or using the C-u SPC keybind."
   (interactive)
   (set-mark-command '(4)))
-(install-if-not-installed 'hydra)
-(setq hydra-is-helpful nil) ; Indicate hydra status with hollow cursor instead, as below
-(install-if-not-installed 'key-chord) ; So we can enter the hydra without needing ctrl
-(setq key-chord-two-keys-delay 0.05)
-(key-chord-mode t)
+
+;; Hydra solution to emacs pinky. When activated with keychord "jk", buffer and
+;; window navigation becomes possible without needing to hold ctrl. Works much
+;; like using vanilla bindings with ctrl pressing itself for you (for navigation only).
 (key-chord-define-global
  "jk"
- (defhydra hydra-edit (:pre (setq cursor-type 'hollow)
-                            :post (progn
-                                    (setq cursor-type t)))
-   "edit"
+ (defhydra hydra-nav ()
+   "nav"
    ("n" next-line)
    ("p" previous-line)
    ("f" forward-char)
@@ -407,53 +380,39 @@ or using the C-u SPC keybind."
    ("a" beginning-of-line)
    ("e" move-end-of-line)
    ("v" scroll-up-command)
-   ("=" er/expand-region)
    ("s" (lambda () ; isearch-forward without leaving hydra
           (interactive)
           (isearch-forward-regexp)
-          (hydra-edit/body))  "search" :color blue)
+          (hydra-nav/body))  :color blue)
    ("r" (lambda () ; isearch-backward without leaving hydra
           (interactive)
           (isearch-backward-regexp)
-          (hydra-edit/body))  "reverse" :color blue) ;
-   ("u SPC" my-jump-to-mark)
+          (hydra-nav/body))  :color blue)
+   ("u SPC" my-jump-to-mark) ; same as C-u SPC
    ("M-v" scroll-down-command)
    ("M-b" backward-word)
    ("M-f" forward-word)
-   ("M-d" kill-word)
-   ("M-;" comment-dwim)
-   ("M-SPC" just-one-space)
-   ("M-^" delete-indentation)
    ("M-m" back-to-indentation)
-   ("M-j" default-indent-new-line)
+   ("M-n" flymake-goto-next-error)
+   ("M-p" flymake-goto-prev-error)
    ("g" keyboard-quit)
-   ("k" kill-visual-line)
-   ("d" delete-char)
-   ("w" kill-region)
-   ("y" yank)
-   ("m" newline)
-   ("TAB" indent-for-tab-command)
-   ("/" undo)
    (";" avy-goto-char)
    ("'" avy-goto-line)
    ("l" recenter-top-bottom)
-   ("M-w" clipboard-kill-ring-save)
    ("M-<" beginning-of-buffer)
    ("M->" end-of-buffer)
    ("M-r" move-to-window-line-top-bottom)
-   ("SPC" set-mark-command)
    ("x0" delete-window)
    ("x1" delete-other-windows)
    ("x2" split-and-follow-vertically)
    ("x3" split-and-follow-horizontally)
+   ("xs" save-buffer)
+   ("xf" find-file)
+   ("xk" kill-this-buffer)
    ("o" other-window)
    ("O" (lambda () ;; same as C-- C-x o
           (interactive)
           (other-window -1)))
-   ("xs" save-buffer)
-   ("xf" find-file)
-   ("xk" kill-this-buffer)
-   ("C-M-," writeroom-mode)
    ("q" nil)))
 
 (install-if-not-installed 'writeroom-mode)
@@ -465,6 +424,7 @@ or using the C-u SPC keybind."
 (with-eval-after-load 'writeroom-mode
   (delete 'writeroom-set-alpha writeroom-global-functions)) ; Don't modify transparency
 
+;; Keep modeline clean with diminish
 (install-if-not-installed 'diminish)
 ;; First diminish built-in visual-line-mode without an eval-after-load
 (diminish 'visual-line-mode)
@@ -482,7 +442,7 @@ or using the C-u SPC keybind."
 (with-eval-after-load 'company
   (diminish 'company-mode))
 (with-eval-after-load 'git-gutter
- (diminish 'git-gutter-mode))
+  (diminish 'git-gutter-mode))
 
 (install-if-not-installed 'expand-region)
 (define-key global-map (kbd "C-=") 'er/expand-region)
