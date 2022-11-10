@@ -147,6 +147,7 @@
 ;; Tabs are 4 spaces
 (setq-default indent-tabs-mode nil)
 (setq-default tab-width 4)
+(setq-default c-basic-offset 4)
 
 ;; Don't clutter filesystem with backups (store them in /tmp/)
 (setq backup-directory-alist
@@ -207,15 +208,16 @@
 ;; No warnings when showing lots of images with image-dired-show-all-from-dir
 (setq image-dired-show-all-from-dir-max-files 999)
 
-;; Use Emacs 29 built-in completion with C-M-i and M-/ rather than a package
-(setq completions-format 'one-column)
-(setq completions-header-format nil)
-(setq completions-max-height 20)
-(setq completion-auto-select t)
-;; Fuzzy-matching, etc
-;(setq completion-styles '(initials partial-completion flex))
+;; Use Emacs 29 built-in completion with C-M-i and M-/ if using Emacs 29
+(when (version< emacs-version "29")
+  (setq completions-format 'one-column)
+  (setq completions-header-format nil)
+  (setq completions-max-height 20)
+  (setq completion-auto-select t))
 
-;; Use eglot built in to Emacs 29 for lsp
+;; Use eglot built in to Emacs 29 for lsp. Install it if not using Emacs 29.
+(when (version< emacs-version "29")
+  (install-if-not-installed 'eglot))
 (setq eglot-hooks '(c-mode-hook c++-mode-hook objc-mode-hook
                                 html-mode-hook css-mode-hook js-mode-hook
                                 python-mode-hook))
@@ -479,15 +481,6 @@ time position in the modeline. Do nothing if emms is already loaded."
 (pdf-loader-install)
 
 ;;; Packages - programming
-;; Lsp-pyright with deferred loading
-;; alternative that doesn't have lsp-mode prereq?
-(install-if-not-installed 'lsp-pyright)
-(defun require-pyright ()
-  "Load lsp-pyright."
-  (unless (featurep 'lsp-pyright)
-    (require 'lsp-pyright)))
-(add-hook 'python-mode-hook 'require-pyright)
-
 (install-if-not-installed 'projectile)
 ;; Load and set up projectile only after either lsp-mode is enabled (enter
 ;; a project) or an attempt at using a projectile keybind is made
@@ -527,11 +520,11 @@ Do nothing if projectile is already loaded."
 (define-key global-map (kbd "C-c g") 'magit-file-dispatch)
 
 (install-if-not-installed 'git-gutter-fringe)
-;; git-gutter-fringe deferred loading
+;; git-gutter-fringe deferred loading (load when enter eglot mode)
 (defun load-git-gutter-fringe ()
   "Load git-gutter-fringe."
   (unless (featurep 'git-gutter-fringe)
     (require 'git-gutter-fringe)
     (global-git-gutter-mode t)))
-(add-hook 'prog-mode-hook 'load-git-gutter-fringe) ; todo: why does this cause load at startup?
-(add-hook 'text-mode-hook 'load-git-gutter-fringe)
+(with-eval-after-load 'eglot
+  (load-git-gutter-fringe))
