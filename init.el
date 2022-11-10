@@ -48,7 +48,7 @@
 (setq auto-package-update-hide-results t)
 (auto-package-update-maybe)
 
-;;; Themes
+;;; Theming
 (defun disable-all-themes ()
   "Disable all active themes."
   (interactive)
@@ -75,11 +75,11 @@
 ;; List of good themes to cycle through, with first theme being default theme
 (setq main-themes
       (list 'ewal-spacemacs-classic
+            'doom-ir-black
+            'cherry-blossom
             'base16-ashes
             'base16-darkviolet
             'my-manoj-dark
-            'doom-ir-black
-            'cherry-blossom
             'minsk))
 (setq current-theme-num 0)
 (defun cycle-theme ()
@@ -94,13 +94,14 @@
         (load-theme (nth current-theme-num main-themes) t)
         (setq current-theme-num (+ current-theme-num 1)))))
 
+(defun reload-ewal-theme ()
+  "Reloads the ewal-spacemacs-classic theme."
+  (interactive)
+  (disable-all-themes)
+  (load-theme 'ewal-spacemacs-classic))
+
 ;; Set first theme
 (cycle-theme)
-
-;; Also rand-theme option
-(install-if-not-installed 'rand-theme)
-(setq rand-theme-unwanted '(adwaita dichromacy tango leuven light-blue tsdh-light modus-operandi whiteboard))
-(define-key global-map (kbd "C-c r") 'rand-theme)
 
 ;;; Basic configuration
 (set-language-environment "Japanese")
@@ -111,9 +112,6 @@
 
 ;; Highlight matching parens
 (show-paren-mode t)
-
-;; Automatically create matching parens
-(electric-pair-mode 1)
 
 ;; Show column in modeline
 (column-number-mode t)
@@ -145,9 +143,6 @@
 ;; Note that must enable the mode only after the configuration
 (setq display-time-default-load-average nil)
 (display-time-mode t)
-
-;; y/n for yes/no
-(defalias 'yes-or-no-p 'y-or-n-p)
 
 ;; Tabs are 4 spaces
 (setq-default indent-tabs-mode nil)
@@ -181,9 +176,6 @@
 (setq password-cache t)
 (setq password-cache-expiry 300)
 
-;; Fuzzy-matching, etc
-(setq completion-styles '(initials partial-completion flex))
-
 ;; Make .conf files and extensionless files trigger text-mode
 (add-to-list 'auto-mode-alist '("\\.conf\\'" . text-mode))
 (add-to-list 'auto-mode-alist '("/[^\\./]*\\'" . text-mode))
@@ -214,6 +206,30 @@
 
 ;; No warnings when showing lots of images with image-dired-show-all-from-dir
 (setq image-dired-show-all-from-dir-max-files 999)
+
+;; Use Emacs 29 built-in completion with C-M-i and M-/ rather than a package
+(setq completions-format 'one-column)
+(setq completions-header-format nil)
+(setq completions-max-height 20)
+(setq completion-auto-select t)
+;; Fuzzy-matching, etc
+;(setq completion-styles '(initials partial-completion flex))
+
+;; Use eglot built in to Emacs 29 for lsp
+(setq eglot-hooks '(c-mode-hook c++-mode-hook objc-mode-hook
+                                html-mode-hook css-mode-hook js-mode-hook
+                                python-mode-hook))
+(dolist (hook eglot-hooks)
+  (add-hook hook 'eglot-ensure))
+;; Disable documentation on hover/symbol highlighting
+(setq eglot-ignored-server-capabilities '(:hoverProvider :documentHighlightProvider))
+
+;; Flymake keybinds
+(with-eval-after-load 'flymake
+  (define-key flymake-mode-map (kbd "M-n") 'flymake-goto-next-error)
+  (define-key flymake-mode-map (kbd "M-p") 'flymake-goto-prev-error))
+;; Put flymake on right fringe so we can use git-gutter on the left fringe
+(setq flymake-fringe-indicator-position 'right-fringe)
 
 ;;; My main functions
 (defun split-and-follow-horizontally ()
@@ -258,48 +274,6 @@ Effectively toggles showing/hiding dotfiles."
   (let ((file (dired-get-filename nil t)))
     (call-process "xdg-open" nil 0 nil file)))
 
-(defun eshell-other-window ()
-  "Launch eshell in another window, or switch to eshell buffer in another window
- if buffer exists. If the former, launch inside the current directory."
-  (interactive)
-  (unless (get-buffer "*eshell*")
-    (eshell)
-    (previous-buffer))
-  (switch-to-buffer-other-window "*eshell*"))
-
-(defun ansi-term-other-window ()
-  "Launch ansi-term with bash in another window, or switch to ansi-term buffer
-in another window if buffer exists. If the former, launch inside the current
-directory."
-  (interactive)
-  (unless (get-buffer "*ansi-term*")
-    (ansi-term "/bin/bash")
-    (previous-buffer))
-  (switch-to-buffer-other-window "*ansi-term*"))
-
-(defun dired-other-window-current-directory ()
-  "Launch dired on the current directory in another window."
-  (interactive)
-  (let ((dir (file-name-nondirectory
-              (directory-file-name
-               (file-name-directory buffer-file-name)))))
-    (unless (get-buffer dir)
-      (dired ".")
-      (previous-buffer))
-    (split-window-sensibly (selected-window))
-    (switch-to-buffer-other-window dir)))
-
-(defun dired-music-other-window ()
-  "Launch dired on ~/音楽/ in another window, or switch to that buffer in
-another window if it already exists."
-  (interactive)
-  (if (not (get-buffer "音楽"))
-      (progn
-        (split-window-sensibly)
-        (other-window 1)
-        (dired "~/音楽/"))
-    (switch-to-buffer-other-window "音楽")))
-
 (defun image-dired-current-directory ()
   "Launch `image-dired' on the current directory."
   (interactive)
@@ -321,15 +295,13 @@ mode-line by `toggle-mode-line'.")
 ;;; Keybinds - for my functions
 (define-key global-map (kbd "C-x 2") 'split-and-follow-horizontally)
 (define-key global-map (kbd "C-x 3") 'split-and-follow-vertically)
-(define-key global-map (kbd "C-M-'") 'alternate-buffer)
-(define-key global-map (kbd "C-c s") 'eshell-other-window)
-(define-key global-map (kbd "C-c a") 'ansi-term-other-window)
-(define-key global-map (kbd "C-c d") 'dired-other-window-current-directory)
-(define-key global-map (kbd "C-c m") 'dired-music-other-window)
+(define-key global-map (kbd "C-M-;") 'alternate-buffer)
+(define-key global-map (kbd "C-c s") 'eshell)
 (define-key global-map (kbd "C-c i") 'image-dired-current-directory)
 (define-key global-map (kbd "C-c ;") 'toggle-mode-line)
 (define-key global-map (kbd "C-c '") 'load-theme-from-scratch)
 (define-key global-map (kbd "C-c k") 'cycle-theme)
+(define-key global-map (kbd "C-c j") 'reload-ewal-theme)
 (with-eval-after-load 'dired
   (define-key dired-mode-map (kbd "C-c o") 'dired-xdg-open)
   (define-key dired-mode-map (kbd "C-.") 'toggle-dired-listing-switches))
@@ -337,6 +309,9 @@ mode-line by `toggle-mode-line'.")
 ;;; Keybinds - for unbound built-in functions
 ;; Make C-x k kill current buffer without prompt
 (define-key global-map (kbd "C-x k") 'kill-this-buffer)
+;; Next/prev buffer more easily than the default binding
+(define-key global-map (kbd "C-,") 'previous-buffer)
+(define-key global-map (kbd "C-.") 'next-buffer)
 
 ;; Autoload org-timer functions before binding them
 (dolist (func '(org-timer-set-timer
@@ -354,7 +329,10 @@ mode-line by `toggle-mode-line'.")
 (setq hydra-is-helpful nil)
 
 (install-if-not-installed 'key-chord)
-(setq key-chord-two-keys-delay 0.075)
+(setq key-chord-two-keys-delay 0.1)
+(setq key-chord-safety-interval-backward 0.1)
+(setq key-chord-safety-interval-forward  0.25)
+(key-chord-define-global "dk" 'avy-goto-char)
 (key-chord-mode t)
 
 (defun my-jump-to-mark () ; Function that is equivalent to entering C-u SPC
@@ -393,9 +371,13 @@ or using the C-u SPC keybind."
    ("M-m" back-to-indentation)
    ("M-n" flymake-goto-next-error)
    ("M-p" flymake-goto-prev-error)
+   ("," previous-buffer)
+   ("." next-buffer)
+   ("M-;" alternate-buffer)
    ("g" keyboard-quit)
    (";" avy-goto-char)
    ("'" avy-goto-line)
+   ("M-/" avy-kill-region)
    ("l" recenter-top-bottom)
    ("M-<" beginning-of-buffer)
    ("M->" end-of-buffer)
@@ -415,12 +397,11 @@ or using the C-u SPC keybind."
 
 (install-if-not-installed 'writeroom-mode)
 (define-key global-map (kbd "C-M-,") 'writeroom-mode)
-(setq writeroom-bottom-divider-width 0) ; Don't adjust buffer width/center text
-(setq writeroom-width 1)
+(setq writeroom-bottom-divider-width 0) ; No line at bottom of window in writeroom mode
+(setq writeroom-width 100)
 (setq writeroom-restore-window-config t)
-(setq writeroom-fullscreen-effect "maximized")
 (with-eval-after-load 'writeroom-mode
-  (delete 'writeroom-set-alpha writeroom-global-functions)) ; Don't modify transparency
+  (delete 'writeroom-set-alpha writeroom-global-effects)) ; Don't modify transparency
 
 ;; Keep modeline clean with diminish
 (install-if-not-installed 'diminish)
@@ -449,12 +430,9 @@ or using the C-u SPC keybind."
 (which-key-mode t)
 
 (install-if-not-installed 'avy)
-(setq avy-all-windows nil) ; Only consider candidates in the current window
 (define-key global-map (kbd "C-;") 'avy-goto-char)
 (define-key global-map (kbd "C-'") 'avy-goto-line)
-(with-eval-after-load 'avy
-  (set-face-attribute 'avy-lead-face nil :weight 'bold)
-  (set-face-attribute 'avy-lead-face-0 nil :weight 'bold))
+(define-key global-map (kbd "C-M-/") 'avy-kill-region)
 
 (install-if-not-installed 'emms)
 (define-prefix-command 'emms-map)
@@ -501,66 +479,14 @@ time position in the modeline. Do nothing if emms is already loaded."
 (pdf-loader-install)
 
 ;;; Packages - programming
-(install-if-not-installed 'lsp-mode)
-(setq lsp-keymap-prefix "C-c l")
-;; Hook into lsp-mode for each mode hook listed below.
-;; Language servers must be installed externally for lsp to work.
-;; C/C++: Must have ccls, clangd, or similar installed
-;; html: "npm install -g vscode-html-languageserver-bin"
-;; css: "npm install -g vscode-css-languageserver-bin"
-;; js: "npm install -g typescript-language-server; npm install -g typescript"
-;; python: "pip install 'python-language-server[all]'"
-(setq my-lsp-mode-hooks '(c-mode-hook c++-mode-hook objc-mode-hook
-                                      html-mode-hook css-mode-hook js-mode-hook
-                                      python-mode-hook))
-(dolist (hook my-lsp-mode-hooks)
-  (add-hook hook #'lsp-deferred))
-(add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration)
-
-;; Set up lsp-pyright deferred loading
+;; Lsp-pyright with deferred loading
+;; alternative that doesn't have lsp-mode prereq?
 (install-if-not-installed 'lsp-pyright)
 (defun require-pyright ()
   "Load lsp-pyright."
   (unless (featurep 'lsp-pyright)
     (require 'lsp-pyright)))
 (add-hook 'python-mode-hook 'require-pyright)
-
-;; Disable some functionality
-;; (setq lsp-enable-on-type-formatting nil)
-;; (setq lsp-headerline-breadcrumb-enable nil) ; Hide headerline
-
-;; Enable stricter linting for css
-(setq lsp-css-lint-duplicate-properties t
-      lsp-css-lint-zero-units t
-      lsp-css-lint-universal-selector t
-      lsp-css-lint-box-model t
-      lsp-css-lint-important t
-      lsp-css-lint-float t
-      lsp-css-lint-id-selector t)
-;; lsp-mode performance boosting
-;; Be sure also to use emacs version 27+ compiled with native json support
-(setq read-process-output-max (* 1024 1024))
-
-(with-eval-after-load 'flymake
-  (define-key flymake-mode-map (kbd "M-n") 'flymake-goto-next-error)
-  (define-key flymake-mode-map (kbd "M-p") 'flymake-goto-prev-error))
-;; Put flymake on right fringe so we can use git-gutter on the left fringe
-(setq flymake-fringe-indicator-position 'right-fringe)
-
-(install-if-not-installed 'lsp-ui)
-(with-eval-after-load 'lsp-ui
-  (setq lsp-ui-sideline-enable nil)
-  (setq lsp-ui-doc-enable nil)
-  (define-key lsp-ui-mode-map (kbd "M-.") 'lsp-ui-peek-find-definitions)
-  (define-key lsp-ui-mode-map (kbd "M-?") 'lsp-ui-peek-find-references))
-
-(install-if-not-installed 'company)
-(setq company-idle-delay nil) ;; Complete only on demand with keybind
-(define-key global-map (kbd "M-i") 'company-complete)
-
-;; Need yasnippet for html completion
- (install-if-not-installed 'yasnippet)
- (add-hook 'lsp-mode-hook #'yas-global-mode)
 
 (install-if-not-installed 'projectile)
 ;; Load and set up projectile only after either lsp-mode is enabled (enter
