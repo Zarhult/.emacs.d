@@ -152,8 +152,6 @@
 ;; Tabs are 4 spaces
 (setq-default indent-tabs-mode nil)
 (setq-default tab-width 4)
-(setq-default c-basic-offset 4)
-(setq-default c-default-style "linux")
 
 ;; Don't clutter filesystem with backups (store them in /tmp/)
 (setq backup-directory-alist
