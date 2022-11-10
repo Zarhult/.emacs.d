@@ -209,7 +209,7 @@
 (setq image-dired-show-all-from-dir-max-files 999)
 
 ;; Use Emacs 29 built-in completion with C-M-i and M-/ if using Emacs 29
-(when (version< emacs-version "29")
+(unless (version< emacs-version "29")
   (setq completions-format 'one-column)
   (setq completions-header-format nil)
   (setq completions-max-height 20)
@@ -482,8 +482,7 @@ time position in the modeline. Do nothing if emms is already loaded."
 
 ;;; Packages - programming
 (install-if-not-installed 'projectile)
-;; Load and set up projectile only after either lsp-mode is enabled (enter
-;; a project) or an attempt at using a projectile keybind is made
+;; Load and set up projectile only after either eglot is enabled or try to use a projectile keybind
 (setq my-projectile-prefix (kbd "C-c p"))
 (defun setup-projectile-with-prefix (prefix)
   "Unbind any previous global PREFIX binding, and load and enable projectile
@@ -502,9 +501,9 @@ Do nothing if projectile is already loaded."
     (setq unread-command-events
           (mapcar (lambda (e) `(t . ,e))
                   (listify-key-sequence my-projectile-prefix)))))
-(add-hook 'lsp-mode-hook
-          (lambda () (interactive)
-            (setup-projectile-with-prefix my-projectile-prefix)))
+(dolist (hook eglot-hooks)
+  (add-hook hook (lambda () (interactive)
+                   (setup-projectile-with-prefix my-projectile-prefix))))
 (with-eval-after-load 'projectile
   ;; Ignore directories commonly associated with building
   (setq projectile-indexing-method 'native)
@@ -520,11 +519,9 @@ Do nothing if projectile is already loaded."
 (define-key global-map (kbd "C-c g") 'magit-file-dispatch)
 
 (install-if-not-installed 'git-gutter-fringe)
-;; git-gutter-fringe deferred loading (load when enter eglot mode)
-(defun load-git-gutter-fringe ()
-  "Load git-gutter-fringe."
-  (unless (featurep 'git-gutter-fringe)
-    (require 'git-gutter-fringe)
-    (global-git-gutter-mode t)))
-(with-eval-after-load 'eglot
-  (load-git-gutter-fringe))
+;; git-gutter-fringe deferred loading (load alongside eglot's hooks and prog-mode-hook)
+(dolist (hook (push 'prog-mode-hook eglot-hooks))
+  (add-hook hook (lambda () (interactive)
+                   (unless (featurep 'git-gutter-fringe)
+                     (require 'git-gutter-fringe)
+                     (global-git-gutter-mode t)))))
