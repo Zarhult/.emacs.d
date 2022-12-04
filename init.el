@@ -60,21 +60,35 @@
   (disable-all-themes)
   (call-interactively 'load-theme))
 
+;; No bold text
+(defun remap-faces-default-attributes ()
+  (let ((family (face-attribute 'default :family))
+        (height (face-attribute 'default :height)))
+    (mapcar (lambda (face)
+              (face-remap-add-relative
+               face :family family :weight 'normal :height height))
+            (face-list))))
+(when (display-graphic-p)
+ (add-hook 'minibuffer-setup-hook 'remap-faces-default-attributes)
+ (add-hook 'change-major-mode-after-body-hook 'remap-faces-default-attributes))
+
 ;; Install some cool themes
 (install-if-not-installed 'ewal)
 (dolist (theme '(ewal-spacemacs-themes
+                 ewal-doom-themes
                  base16-theme
                  doom-themes
                  cherry-blossom-theme
                  minsk-theme))
   (install-if-not-installed theme))
-(setq doom-themes-enable-bold t)
-(setq doom-themes-enable-italic t)
 (setq ewal-shade-percent-difference 15) ; This makes avy's colors readable with ewal theme
+;(setq doom-themes-enable-bold t)
+;(setq doom-themes-enable-italic t)
 
 ;; List of good themes to cycle through, with first theme being default theme
 (setq main-themes
-      (list 'ewal-spacemacs-classic
+      (list 'ewal-doom-one
+            'ewal-spacemacs-classic
             'doom-ir-black
             'cherry-blossom
             'base16-ashes
@@ -95,10 +109,10 @@
         (setq current-theme-num (+ current-theme-num 1)))))
 
 (defun reload-ewal-theme ()
-  "Reloads the ewal-spacemacs-classic theme."
+  "Reloads the ewal-doom-one theme."
   (interactive)
   (disable-all-themes)
-  (load-theme 'ewal-spacemacs-classic))
+  (load-theme 'ewal-doom-one))
 
 ;; Set first theme
 (cycle-theme)
@@ -116,7 +130,9 @@
 ;; Show column in modeline
 (column-number-mode t)
 
-;; Font size
+;; Font and font size
+(when (member "Liberation Mono" (font-family-list))
+  (set-face-attribute 'default nil :font "Liberation Mono"))
 (set-face-attribute 'default nil :height 105)
 
 ;; Set Japanese font (if not in terminal emacs)
@@ -159,7 +175,7 @@
 (global-prettify-symbols-mode t)
 
 ;; Don't auto-fit images
-(setq-default image-auto-resize 1.2)
+;(setq-default image-auto-resize 1.2)
 ;; Hide mode-line when viewing images
 (add-hook 'image-mode-hook (lambda () (setq mode-line-format nil)))
 ;; Keybinds for ease of horizontal scrolling of images
@@ -181,7 +197,9 @@
 (add-to-list 'auto-mode-alist '("\\.conf\\'" . text-mode))
 (add-to-list 'auto-mode-alist '("/[^\\./]*\\'" . text-mode))
 
-;; Use relative line numbers when line numbers are enabled
+;; Use relative line numbers for text editing
+(add-hook 'prog-mode-hook 'display-line-numbers-mode)
+(add-hook 'text-mode-hook 'display-line-numbers-mode)
 (setq display-line-numbers-type 'relative)
 
 ;; Scroll line by line
@@ -267,6 +285,7 @@ Effectively toggles showing/hiding dotfiles."
       (setq dired-listing-switches "-lhFA"))
     (reload-current-dired-buffer)))
 ;; Hide dotfiles in dired by default
+(add-hook 'dired-mode-hook 'dired-hide-details-mode)
 (with-eval-after-load 'dired
   (setq dired-listing-switches "-lhF"))
 
@@ -294,6 +313,16 @@ mode-line by `toggle-mode-line'.")
     (previous-buffer) ; Hacky way of forcing mode-line to update
     (next-buffer)))
 
+;; Default hidden mode-line. Must come after the above defvar mode-line-format-visible
+;; or won't be able to reveal the modeline
+(setq-default mode-line-format nil)
+
+(defun center-and-square-frame ()
+  "Resize the frame to 1100 x 1000 px and then center it. Assumes 1920x1080 px monitor."
+  (interactive)
+  (set-frame-size (selected-frame) 1100 1000 t)
+  (set-frame-position (selected-frame) 410 40))
+
 ;;; Keybinds - for my functions
 (define-key global-map (kbd "C-x 2") 'split-and-follow-horizontally)
 (define-key global-map (kbd "C-x 3") 'split-and-follow-vertically)
@@ -304,6 +333,7 @@ mode-line by `toggle-mode-line'.")
 (define-key global-map (kbd "C-c '") 'load-theme-from-scratch)
 (define-key global-map (kbd "C-c k") 'cycle-theme)
 (define-key global-map (kbd "C-c j") 'reload-ewal-theme)
+(define-key global-map (kbd "C-c m") 'center-and-square-frame)
 (with-eval-after-load 'dired
   (define-key dired-mode-map (kbd "C-c o") 'dired-xdg-open)
   (define-key dired-mode-map (kbd "C-.") 'toggle-dired-listing-switches))
@@ -328,14 +358,14 @@ mode-line by `toggle-mode-line'.")
 
 ;;; Packages - general
 (install-if-not-installed 'hydra)
-(setq hydra-is-helpful nil)
 
 (install-if-not-installed 'key-chord)
 (setq key-chord-two-keys-delay 0.1)
 (setq key-chord-safety-interval-backward 0.1)
 (setq key-chord-safety-interval-forward  0.25)
-(key-chord-define-global "dk" 'avy-goto-char)
 (key-chord-mode t)
+(key-chord-define-global "dk" 'avy-goto-char)
+(key-chord-define-global "fj" 'avy-goto-line)
 
 (defun my-jump-to-mark () ; Function that is equivalent to entering C-u SPC
   "Jump to the local mark, respecting the `mark-ring' order.
@@ -396,6 +426,31 @@ or using the C-u SPC keybind."
           (interactive)
           (other-window -1)))
    ("q" nil)))
+
+;(install-if-not-installed 'evil)
+;(require 'evil)
+;(install-if-not-installed 'goto-chg)
+;(evil-set-undo-system 'undo-redo)
+;(setq evil-insert-state-cursor t)
+;(setq evil-motion-state-cursor t)
+;(setq evil-operator-state-cursor t)
+;(setq evil-visual-state-cursor t)
+;(setq evil-replace-state-cursor t)
+;(setq evil-default-state 'emacs)
+;(define-key evil-normal-state-map (kbd "C-,") 'previous-buffer) ; Rebind these to work in evil-mode too
+;(define-key evil-normal-state-map (kbd "C-.") 'next-buffer)
+;(evil-set-initial-state 'prog-mode 'normal)
+;(evil-set-initial-state 'text-mode 'normal)
+;(install-if-not-installed 'evil-numbers) ; So can increment/decrement like vim's C-a and C-x
+;(require 'evil-numbers)
+;(global-set-key (kbd "C-c +") 'evil-numbers/inc-at-pt)
+;(global-set-key (kbd "C-c -") 'evil-numbers/dec-at-pt)
+;(add-hook 'evil-emacs-state-entry-hook #'(lambda () (key-chord-mode t))) ;; Only use key-chord-mode when not using evil
+;(add-hook 'evil-emacs-state-exit-hook #'(lambda () (key-chord-mode -1)))
+;(add-hook 'evil-normal-state-entry-hook #'(lambda () (key-chord-mode -1)))
+;(evil-mode t)
+
+(install-if-not-installed 'free-keys)
 
 (install-if-not-installed 'writeroom-mode)
 (define-key global-map (kbd "C-M-,") 'writeroom-mode)
