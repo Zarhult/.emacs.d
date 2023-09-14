@@ -74,9 +74,7 @@
 
 ;; Install some cool themes
 (install-if-not-installed 'ewal)
-(dolist (theme '(ewal-spacemacs-themes
-                 ewal-doom-themes
-                 base16-theme
+(dolist (theme '(base16-theme
                  doom-themes
                  cherry-blossom-theme
                  minsk-theme))
@@ -87,13 +85,11 @@
 
 ;; List of good themes to cycle through, with first theme being default theme
 (setq main-themes
-      (list 'ewal-doom-one
-            'ewal-spacemacs-classic
+      (list 'my-manoj-dark
             'doom-ir-black
             'cherry-blossom
             'base16-ashes
             'base16-darkviolet
-            'my-manoj-dark
             'minsk))
 (setq current-theme-num 0)
 (defun cycle-theme ()
@@ -108,11 +104,11 @@
         (load-theme (nth current-theme-num main-themes) t)
         (setq current-theme-num (+ current-theme-num 1)))))
 
-(defun reload-ewal-theme ()
-  "Reloads the ewal-doom-one theme."
-  (interactive)
-  (disable-all-themes)
-  (load-theme 'ewal-doom-one))
+;; (defun reload-ewal-theme ()
+;;   "Reloads the ewal-doom-one theme."
+;;   (interactive)
+;;   (disable-all-themes)
+;;   (load-theme 'ewal-doom-one))
 
 ;; Set first theme
 (cycle-theme)
@@ -133,7 +129,7 @@
 ;; Font and font size
 (when (member "Liberation Mono" (font-family-list))
   (set-face-attribute 'default nil :font "Liberation Mono"))
-(set-face-attribute 'default nil :height 105)
+(set-face-attribute 'default nil :height 120)
 
 ;; Set Japanese font (if not in terminal emacs)
 (if (display-graphic-p)
@@ -164,6 +160,9 @@
 (setq-default indent-tabs-mode nil)
 (setq-default tab-width 4)
 (setq-default c-basic-offset 4)
+
+;; Start at scratch buffer
+(setq inhibit-startup-screen t)
 
 ;; Don't clutter filesystem with backups (store them in /tmp/)
 (setq backup-directory-alist
@@ -205,23 +204,6 @@
 ;; Scroll line by line
 (setq scroll-step 1)
 (setq scroll-conservatively 10000)
-
-;; Better asm-mode indentation
-(defun my-asm-mode-hook ()
-  "Hook to override default `asm-mode' indentation function."
-  (defun asm-calculate-indentation ()
-    (or
-     ;; Flush labels to the left margin.
-     (and (looking-at "\\(\\.\\|\\sw\\|\\s_\\)+:") 0)
-     (and (looking-at "[.@_[:word:]]+:") 0)
-     ;; Same thing for `;;;' comments.
-     (and (looking-at "\\s<\\s<\\s<") 0)
-     ;; %if nasm macro stuff goes to the left margin
-     (and (looking-at "%") 0)
-     (and (looking-at "c?global\\|section\\|default\\|align\\|INIT_..X") 0)
-     ;; The rest goes at column 4
-     (or 4))))
-(add-hook 'asm-mode-hook #'my-asm-mode-hook)
 
 ;; No warnings when showing lots of images with image-dired-show-all-from-dir
 (setq image-dired-show-all-from-dir-max-files 999)
@@ -313,10 +295,6 @@ mode-line by `toggle-mode-line'.")
     (previous-buffer) ; Hacky way of forcing mode-line to update
     (next-buffer)))
 
-;; Default hidden mode-line. Must come after the above defvar mode-line-format-visible
-;; or won't be able to reveal the modeline
-(setq-default mode-line-format nil)
-
 (defun center-and-square-frame ()
   "Resize the frame to 1100 x 1000 px and then center it. Assumes 1920x1080 px monitor."
   (interactive)
@@ -332,7 +310,7 @@ mode-line by `toggle-mode-line'.")
 (define-key global-map (kbd "C-c ;") 'toggle-mode-line)
 (define-key global-map (kbd "C-c '") 'load-theme-from-scratch)
 (define-key global-map (kbd "C-c k") 'cycle-theme)
-(define-key global-map (kbd "C-c j") 'reload-ewal-theme)
+;; (define-key global-map (kbd "C-c j") 'reload-ewal-theme)
 (define-key global-map (kbd "C-c m") 'center-and-square-frame)
 (with-eval-after-load 'dired
   (define-key dired-mode-map (kbd "C-c o") 'dired-xdg-open)
@@ -356,99 +334,28 @@ mode-line by `toggle-mode-line'.")
 (define-key org-timer-map (kbd "p") 'org-timer-pause-or-continue)
 (define-key org-timer-map (kbd "k") 'org-timer-stop)
 
-;;; Packages - general
-(install-if-not-installed 'hydra)
-
-(install-if-not-installed 'key-chord)
-(setq key-chord-two-keys-delay 0.1)
-(setq key-chord-safety-interval-backward 0.1)
-(setq key-chord-safety-interval-forward  0.25)
-(key-chord-mode t)
-(key-chord-define-global "dk" 'avy-goto-char)
-(key-chord-define-global "fj" 'avy-goto-line)
-
-(defun my-jump-to-mark () ; Function that is equivalent to entering C-u SPC
-  "Jump to the local mark, respecting the `mark-ring' order.
-This is the same as using \\[set-mark-command] with the prefix argument,
-or using the C-u SPC keybind."
+;; Disable electric indent in asm mode, indent to same level as prev lines
+(defun newline-and-indent-same-level ()
+  "Insert a newline, then indent to the same column as the current line."
   (interactive)
-  (set-mark-command '(4)))
+  (let ((col (save-excursion
+               (back-to-indentation)
+               (current-column))))
+    (newline)
+    (indent-to-column col)))
+(defun my-asm-mode-hook ()
+  (electric-indent-local-mode -1)
+  (define-key asm-mode-map (kbd "RET") 'newline-and-indent-same-level)
+  (setq indent-tabs-mode nil))
+(add-hook 'asm-mode-hook #'my-asm-mode-hook)
 
-;; Hydra solution to emacs pinky. When activated with keychord "jk", buffer and
-;; window navigation becomes possible without needing to hold ctrl. Works much
-;; like using vanilla bindings with ctrl pressing itself for you (for navigation only).
-(key-chord-define-global
- "jk"
- (defhydra hydra-nav ()
-   "nav"
-   ("n" next-line)
-   ("p" previous-line)
-   ("f" forward-char)
-   ("b" backward-char)
-   ("a" beginning-of-line)
-   ("e" move-end-of-line)
-   ("v" scroll-up-command)
-   ("s" (lambda () ; isearch-forward without leaving hydra
-          (interactive)
-          (isearch-forward-regexp)
-          (hydra-nav/body))  :color blue)
-   ("r" (lambda () ; isearch-backward without leaving hydra
-          (interactive)
-          (isearch-backward-regexp)
-          (hydra-nav/body))  :color blue)
-   ("u SPC" my-jump-to-mark) ; same as C-u SPC
-   ("M-v" scroll-down-command)
-   ("M-b" backward-word)
-   ("M-f" forward-word)
-   ("M-m" back-to-indentation)
-   ("M-n" flymake-goto-next-error)
-   ("M-p" flymake-goto-prev-error)
-   ("," previous-buffer)
-   ("." next-buffer)
-   ("M-;" alternate-buffer)
-   ("g" keyboard-quit)
-   (";" avy-goto-char)
-   ("'" avy-goto-line)
-   ("M-/" avy-kill-region)
-   ("l" recenter-top-bottom)
-   ("M-<" beginning-of-buffer)
-   ("M->" end-of-buffer)
-   ("M-r" move-to-window-line-top-bottom)
-   ("x0" delete-window)
-   ("x1" delete-other-windows)
-   ("x2" split-and-follow-vertically)
-   ("x3" split-and-follow-horizontally)
-   ("xs" save-buffer)
-   ("xf" find-file)
-   ("xk" kill-this-buffer)
-   ("o" other-window)
-   ("O" (lambda () ;; same as C-- C-x o
-          (interactive)
-          (other-window -1)))
-   ("q" nil)))
-
-;(install-if-not-installed 'evil)
-;(require 'evil)
-;(install-if-not-installed 'goto-chg)
-;(evil-set-undo-system 'undo-redo)
-;(setq evil-insert-state-cursor t)
-;(setq evil-motion-state-cursor t)
-;(setq evil-operator-state-cursor t)
-;(setq evil-visual-state-cursor t)
-;(setq evil-replace-state-cursor t)
-;(setq evil-default-state 'emacs)
-;(define-key evil-normal-state-map (kbd "C-,") 'previous-buffer) ; Rebind these to work in evil-mode too
-;(define-key evil-normal-state-map (kbd "C-.") 'next-buffer)
-;(evil-set-initial-state 'prog-mode 'normal)
-;(evil-set-initial-state 'text-mode 'normal)
-;(install-if-not-installed 'evil-numbers) ; So can increment/decrement like vim's C-a and C-x
-;(require 'evil-numbers)
-;(global-set-key (kbd "C-c +") 'evil-numbers/inc-at-pt)
-;(global-set-key (kbd "C-c -") 'evil-numbers/dec-at-pt)
-;(add-hook 'evil-emacs-state-entry-hook #'(lambda () (key-chord-mode t))) ;; Only use key-chord-mode when not using evil
-;(add-hook 'evil-emacs-state-exit-hook #'(lambda () (key-chord-mode -1)))
-;(add-hook 'evil-normal-state-entry-hook #'(lambda () (key-chord-mode -1)))
-;(evil-mode t)
+;;; Packages - general
+(install-if-not-installed 'god-mode)
+(require 'god-mode)
+(global-set-key (kbd "<escape>") #'god-local-mode)
+(define-key god-local-mode-map (kbd "z") #'repeat)
+(define-key god-local-mode-map (kbd "i") #'god-local-mode)
+(god-mode)
 
 (install-if-not-installed 'free-keys)
 
@@ -488,7 +395,6 @@ or using the C-u SPC keybind."
 
 (install-if-not-installed 'avy)
 (define-key global-map (kbd "C-;") 'avy-goto-char)
-(define-key global-map (kbd "C-'") 'avy-goto-line)
 (define-key global-map (kbd "C-M-/") 'avy-kill-region)
 
 (install-if-not-installed 'emms)
