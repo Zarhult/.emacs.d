@@ -61,16 +61,16 @@
   (call-interactively 'load-theme))
 
 ;; No bold text
-(defun remap-faces-default-attributes ()
-  (let ((family (face-attribute 'default :family))
-        (height (face-attribute 'default :height)))
-    (mapcar (lambda (face)
-              (face-remap-add-relative
-               face :family family :weight 'normal :height height))
-            (face-list))))
-(when (display-graphic-p)
- (add-hook 'minibuffer-setup-hook 'remap-faces-default-attributes)
- (add-hook 'change-major-mode-after-body-hook 'remap-faces-default-attributes))
+;; (defun remap-faces-default-attributes ()
+;;   (let ((family (face-attribute 'default :family))
+;;         (height (face-attribute 'default :height)))
+;;     (mapcar (lambda (face)
+;;               (face-remap-add-relative
+;;                face :family family :weight 'normal :height height))
+;;             (face-list))))
+;; (when (display-graphic-p)
+;;  (add-hook 'minibuffer-setup-hook 'remap-faces-default-attributes)
+;;  (add-hook 'change-major-mode-after-body-hook 'remap-faces-default-attributes))
 
 ;; Install some cool themes
 (install-if-not-installed 'ewal)
@@ -85,8 +85,14 @@
 
 ;; List of good themes to cycle through, with first theme being default theme
 (setq main-themes
-      (list 'my-manoj-dark
-            'doom-ir-black
+      (list 'doom-vibrant
+            'doom-one
+            'doom-ayu-dark
+            'doom-ayu-mirage
+            'doom-city-lights
+            'doom-dark+
+            'doom-xcode
+            'my-manoj-dark
             'cherry-blossom
             'base16-ashes
             'base16-darkviolet
@@ -176,7 +182,7 @@
 ;; Don't auto-fit images
 ;(setq-default image-auto-resize 1.2)
 ;; Hide mode-line when viewing images
-(add-hook 'image-mode-hook (lambda () (setq mode-line-format nil)))
+;(add-hook 'image-mode-hook (lambda () (setq mode-line-format nil)))
 ;; Keybinds for ease of horizontal scrolling of images
 (with-eval-after-load 'image-mode
   (define-key image-mode-map (kbd "<tab>") 'image-scroll-left)
@@ -224,7 +230,7 @@
 (dolist (hook eglot-hooks)
   (add-hook hook 'eglot-ensure))
 ;; Disable documentation on hover/symbol highlighting
-(setq eglot-ignored-server-capabilities '(:hoverProvider :documentHighlightProvider))
+;(setq eglot-ignored-server-capabilities '(:hoverProvider :documentHighlightProvider))
 
 ;; Flymake keybinds
 (with-eval-after-load 'flymake
@@ -246,11 +252,6 @@
   (split-window-right)
   (balance-windows)
   (other-window 1))
-
-(defun alternate-buffer ()
-  "Switch to the buffer that was active before the current one."
-  (interactive)
-  (switch-to-buffer nil))
 
 (defun reload-current-dired-buffer ()
   "Reload current `dired-mode' buffer"
@@ -304,13 +305,11 @@ mode-line by `toggle-mode-line'.")
 ;;; Keybinds - for my functions
 (define-key global-map (kbd "C-x 2") 'split-and-follow-horizontally)
 (define-key global-map (kbd "C-x 3") 'split-and-follow-vertically)
-(define-key global-map (kbd "C-M-;") 'alternate-buffer)
 (define-key global-map (kbd "C-c s") 'eshell)
 (define-key global-map (kbd "C-c i") 'image-dired-current-directory)
 (define-key global-map (kbd "C-c ;") 'toggle-mode-line)
 (define-key global-map (kbd "C-c '") 'load-theme-from-scratch)
 (define-key global-map (kbd "C-c k") 'cycle-theme)
-;; (define-key global-map (kbd "C-c j") 'reload-ewal-theme)
 (define-key global-map (kbd "C-c m") 'center-and-square-frame)
 (with-eval-after-load 'dired
   (define-key dired-mode-map (kbd "C-c o") 'dired-xdg-open)
@@ -322,17 +321,6 @@ mode-line by `toggle-mode-line'.")
 ;; Next/prev buffer more easily than the default binding
 (define-key global-map (kbd "C-,") 'previous-buffer)
 (define-key global-map (kbd "C-.") 'next-buffer)
-
-;; Autoload org-timer functions before binding them
-(dolist (func '(org-timer-set-timer
-                org-timer-pause-or-continue
-                org-timer-stop))
-  (autoload func "org-timer"))
-(define-prefix-command 'org-timer-map)
-(define-key global-map (kbd "C-c h") 'org-timer-map)
-(define-key org-timer-map (kbd "s") 'org-timer-set-timer)
-(define-key org-timer-map (kbd "p") 'org-timer-pause-or-continue)
-(define-key org-timer-map (kbd "k") 'org-timer-stop)
 
 ;; Disable electric indent in asm mode, indent to same level as prev lines
 (defun newline-and-indent-same-level ()
@@ -351,11 +339,38 @@ mode-line by `toggle-mode-line'.")
 
 ;;; Packages - general
 (install-if-not-installed 'god-mode)
+(setq god-mode-enable-function-key-translation nil) ; Leave function keys alone
 (require 'god-mode)
 (global-set-key (kbd "<escape>") #'god-local-mode)
 (define-key god-local-mode-map (kbd "z") #'repeat)
 (define-key god-local-mode-map (kbd "i") #'god-local-mode)
+(define-key god-local-mode-map (kbd "C-x C-1") #'delete-other-windows)
+(define-key god-local-mode-map (kbd "C-x C-2") #'split-and-follow-horizontally)
+(define-key god-local-mode-map (kbd "C-x C-3") #'split-and-follow-vertically)
+(define-key god-local-mode-map (kbd "C-x C-0") #'delete-window)
+(define-key god-local-mode-map (kbd "C-x C-o") #'other-window)
+(define-key god-local-mode-map (kbd "C-x C-k") #'kill-this-buffer)
+(define-key god-local-mode-map (kbd "C-c C-s") #'eshell)
+(define-key god-local-mode-map (kbd "C-c C-'") #'load-theme-from-scratch)
+(define-key god-local-mode-map (kbd "C-c C-k") #'cycle-theme)
+;; Block cursor in god-mode, vertical line outside god-mode
+(defun my-god-mode-update-cursor-type ()
+  (setq cursor-type (if (or god-local-mode buffer-read-only) 'box 'bar)))
+(add-hook 'post-command-hook #'my-god-mode-update-cursor-type)
 (god-mode)
+
+(install-if-not-installed 'ivy)
+(ivy-mode)
+(setq ivy-use-virtual-buffers t)
+(setq enable-recursive-minibuffers t)
+
+(install-if-not-installed 'dirvish)
+(dirvish-override-dired-mode)
+(define-key god-local-mode-map (kbd "C-c C-l") 'dirvish-side)
+
+(install-if-not-installed 'doom-modeline) ; Run M-x nerd-icons-install-fonts after install
+(require 'doom-modeline)
+(doom-modeline-mode 1)
 
 (install-if-not-installed 'free-keys)
 
@@ -432,9 +447,6 @@ time position in the modeline. Do nothing if emms is already loaded."
                 emms-play-dired))
   (advice-add func :before #'my-emms-setup))
 
-(install-if-not-installed 'nov)
-(add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
-
 ;; Note that for pdf-tools, if on Gentoo, must install
 ;; app-text/poppler with "cairo" use flag
 (install-if-not-installed 'pdf-tools)
@@ -442,6 +454,10 @@ time position in the modeline. Do nothing if emms is already loaded."
 (pdf-loader-install)
 
 ;;; Packages - programming
+(install-if-not-installed 'corfu)
+(setq corfu-auto t)
+(setq corfu-auto-prefix 2)
+(global-corfu-mode)
 (install-if-not-installed 'projectile)
 ;; Load and set up projectile only after either eglot is enabled or try to use a projectile keybind
 (setq my-projectile-prefix (kbd "C-c p"))
